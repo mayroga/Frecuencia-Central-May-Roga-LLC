@@ -1,0 +1,61 @@
+<!-- File: public/index.html -->
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Frecuencia Central — May Roga LLC</title>
+<link rel="stylesheet" href="/style.css">
+<script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+  <div class="app">
+    <header><h1>Frecuencia Central</h1><p>Elige cómo quieres sentirte hoy — Miguel o María te atenderán.</p></header>
+
+    <main>
+      <div class="card">
+        <label for="mood">Estado de ánimo:</label>
+        <select id="mood">
+          <option value="relajado">Relajado</option>
+          <option value="triste">Triste</option>
+          <option value="melancolico">Melancólico</option>
+          <option value="enamorado">Enamorado</option>
+          <option value="religioso">Religioso</option>
+          <option value="high">High</option>
+          <option value="low">Low</option>
+          <option value="exito">Éxito</option>
+        </select>
+
+        <label for="voice">Atendido por:</label>
+        <select id="voice">
+          <option value="Miguel">Miguel (Hombre)</option>
+          <option value="Maria">María (Mujer)</option>
+        </select>
+
+        <div class="actions">
+          <button id="freeBtn">Sesión Gratis 30s</button>
+          <button id="fullBtn">Sesión Completa (hasta 20 min)</button>
+          <button id="vipBtn">Servicio Ultra VIP ($15,000)</button>
+        </div>
+
+        <div id="playerArea">
+          <audio id="audio" controls></audio>
+        </div>
+
+        <div id="chat" class="chat"></div>
+
+        <div class="upsell">
+          <button data-type="2min" class="upsellBtn">Agregar 2 min ($10)</button>
+          <button data-type="5min" class="upsellBtn">Agregar 5 min ($50)</button>
+          <button data-type="unlimited" class="upsellBtn">Sesion extra ilimitada ($500)</button>
+        </div>
+
+      </div>
+    </main>
+
+    <footer>© May Roga LLC — Frecuencia Central</footer>
+  </div>
+
+<script src="/app.js"></script>
+</body>
+</html>
