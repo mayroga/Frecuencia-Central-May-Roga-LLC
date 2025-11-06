@@ -3,51 +3,86 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Frecuencia Central</title>
+<title>Frecuencia Central - May Roga LLC</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #111; color: #fff; margin: 0; padding: 0; }
+  header { background: #222; padding: 1rem; text-align: center; font-size: 1.5rem; }
+  main { padding: 2rem; max-width: 800px; margin: auto; }
+  textarea { width: 100%; height: 100px; margin-bottom: 1rem; padding: 0.5rem; font-size: 1rem; }
+  button { padding: 0.5rem 1rem; font-size: 1rem; margin-right: 0.5rem; cursor: pointer; }
+  #audio-controls { margin-top: 1rem; }
+</style>
 </head>
 <body>
-<h1>Frecuencia Central - Chat y Voz</h1>
-
-<textarea id="textInput" rows="4" cols="50" placeholder="Escribe tu mensaje aquí"></textarea><br>
-<button id="speakBtn">Hablar</button>
-
-<select id="voiceSelect"></select>
+<header>Frecuencia Central - May Roga LLC</header>
+<main>
+  <textarea id="userText" placeholder="Escribe algo o habla usando el micrófono..."></textarea>
+  <div>
+    <button id="detectLangBtn">Detectar idioma y hablar</button>
+    <button id="speakBtn">Hablar</button>
+    <button id="startMicBtn">🎤 Hablar por micrófono</button>
+  </div>
+  <div id="audio-controls"></div>
+</main>
 
 <script>
-const textInput = document.getElementById('textInput');
+const userText = document.getElementById('userText');
 const speakBtn = document.getElementById('speakBtn');
-const voiceSelect = document.getElementById('voiceSelect');
+const detectLangBtn = document.getElementById('detectLangBtn');
+const startMicBtn = document.getElementById('startMicBtn');
 
-let voices = [];
-
-function populateVoices(){
-  voices = speechSynthesis.getVoices();
-  voiceSelect.innerHTML = '';
-  voices.forEach(v=>{
-    const opt = document.createElement('option');
-    opt.value = v.name;
-    opt.textContent = `${v.name} (${v.lang})`;
-    voiceSelect.appendChild(opt);
-  });
+function speak(text, lang = 'es-ES', voiceName = null) {
+  if(!window.speechSynthesis) return alert('Tu navegador no soporta SpeechSynthesis');
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text.replace(/[\*\(\),]/g,''));
+  utter.lang = lang;
+  if(voiceName){
+    const voices = speechSynthesis.getVoices();
+    const v = voices.find(v => v.name === voiceName);
+    if(v) utter.voice = v;
+  }
+  window.speechSynthesis.speak(utter);
 }
 
-speechSynthesis.onvoiceschanged = populateVoices;
-populateVoices();
+// Detección simple de idioma (usa Intl API como aproximación)
+function detectLanguage(text){
+  try{
+    const lang = new Intl.Locale(navigator.language || 'es').language;
+    if(text.match(/[a-zA-Z]/) && !text.match(/[áéíóúñ]/i)) return 'en-US';
+    return lang || 'es-ES';
+  } catch(e){ return 'es-ES'; }
+}
 
-speakBtn.onclick = () => {
-  const text = textInput.value.trim();
+// Botón: detectar idioma y hablar
+detectLangBtn.addEventListener('click', ()=>{
+  const text = userText.value.trim();
   if(!text) return;
+  const lang = detectLanguage(text);
+  speak(text, lang);
+});
 
-  // Detección simple de idioma
-  const lang = /^[A-Za-zÀ-ÖØ-öø-ÿ]+$/.test(text) ? 'en-US' : 'es-ES';
+// Botón: hablar directamente
+speakBtn.addEventListener('click', ()=>{
+  const text = userText.value.trim();
+  if(!text) return;
+  speak(text, 'es-ES');
+});
 
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.voice = voices.find(v=>v.name===voiceSelect.value) || voices[0];
-  utter.lang = lang;
-  utter.rate = 1;
-  utter.pitch = 1;
-  speechSynthesis.speak(utter);
-};
+// Botón: usar micrófono
+startMicBtn.addEventListener('click', ()=>{
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return alert('Micrófono no soportado');
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = 'es-ES';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.start();
+  recognition.onresult = (event)=>{
+    const speechText = event.results[0][0].transcript;
+    userText.value = speechText;
+    speak(speechText, detectLanguage(speechText));
+  };
+  recognition.onerror = (e)=>console.error(e);
+});
 </script>
 </body>
 </html>
