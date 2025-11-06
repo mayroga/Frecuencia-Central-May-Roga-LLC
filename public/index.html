@@ -1,61 +1,99 @@
-<!-- File: public/index.html -->
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Frecuencia Central — May Roga LLC</title>
-<link rel="stylesheet" href="/style.css">
-<script src="https://js.stripe.com/v3/"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frecuencia Central - Comunicación Bidireccional</title>
+<style>
+body{font-family:Arial,sans-serif;padding:20px;background:#111;color:#eee;}
+textarea{width:100%;height:100px;margin-bottom:10px;font-size:1.1rem;}
+button{padding:10px 15px;margin:5px;font-size:1rem;}
+#output{margin-top:20px;padding:10px;border:1px solid #333;height:150px;overflow-y:auto;}
+</style>
 </head>
 <body>
-  <div class="app">
-    <header><h1>Frecuencia Central</h1><p>Elige cómo quieres sentirte hoy — Miguel o María te atenderán.</p></header>
 
-    <main>
-      <div class="card">
-        <label for="mood">Estado de ánimo:</label>
-        <select id="mood">
-          <option value="relajado">Relajado</option>
-          <option value="triste">Triste</option>
-          <option value="melancolico">Melancólico</option>
-          <option value="enamorado">Enamorado</option>
-          <option value="religioso">Religioso</option>
-          <option value="high">High</option>
-          <option value="low">Low</option>
-          <option value="exito">Éxito</option>
-        </select>
+<h1>Frecuencia Central - Comunicación</h1>
 
-        <label for="voice">Atendido por:</label>
-        <select id="voice">
-          <option value="Miguel">Miguel (Hombre)</option>
-          <option value="Maria">María (Mujer)</option>
-        </select>
+<textarea id="txtInput" placeholder="Escribe tu mensaje aquí..."></textarea><br>
+<button id="btnSpeak">Reproducir voz</button>
+<button id="btnListen">Hablar</button>
 
-        <div class="actions">
-          <button id="freeBtn">Sesión Gratis 30s</button>
-          <button id="fullBtn">Sesión Completa (hasta 20 min)</button>
-          <button id="vipBtn">Servicio Ultra VIP ($15,000)</button>
-        </div>
+<div id="output"></div>
 
-        <div id="playerArea">
-          <audio id="audio" controls></audio>
-        </div>
+<script>
+let recognition;
+if('webkitSpeechRecognition' in window || 'SpeechRecognition' in window){
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.lang = 'es-ES';
+}
 
-        <div id="chat" class="chat"></div>
+// Función para limpiar texto
+function cleanText(text){
+    return text.replace(/[\*\(\),]/g,'').trim();
+}
 
-        <div class="upsell">
-          <button data-type="2min" class="upsellBtn">Agregar 2 min ($10)</button>
-          <button data-type="5min" class="upsellBtn">Agregar 5 min ($50)</button>
-          <button data-type="unlimited" class="upsellBtn">Sesion extra ilimitada ($500)</button>
-        </div>
+// Función para hablar
+function speakText(text, lang='es-ES'){
+    const clean = cleanText(text);
+    if(!clean) return;
+    const utter = new SpeechSynthesisUtterance(clean);
+    utter.lang = lang;
+    const voices = speechSynthesis.getVoices();
+    utter.voice = voices.find(v=>v.lang.includes(lang.slice(0,2))) || voices[0];
+    speechSynthesis.speak(utter);
+    addOutput(`💬 ${clean}`);
+}
 
-      </div>
-    </main>
+// Mostrar mensajes
+function addOutput(msg){
+    const div = document.getElementById('output');
+    div.innerHTML += msg + '<br>';
+    div.scrollTop = div.scrollHeight;
+}
 
-    <footer>© May Roga LLC — Frecuencia Central</footer>
-  </div>
+// Detección automática de idioma
+async function detectLanguage(text){
+    try {
+        const res = await fetch('/detect-language',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({ text })
+        });
+        const data = await res.json();
+        return data.language || 'es';
+    } catch(e){ return 'es'; }
+}
 
-<script src="/app.js"></script>
+// Botón reproducir
+document.getElementById('btnSpeak').addEventListener('click', async ()=>{
+    const text = document.getElementById('txtInput').value;
+    if(!text) return;
+    const lang = await detectLanguage(text);
+    speakText(text, lang);
+});
+
+// Botón hablar
+document.getElementById('btnListen').addEventListener('click', ()=>{
+    if(!recognition) return alert('Tu navegador no soporta reconocimiento de voz.');
+    recognition.start();
+});
+
+if(recognition){
+    recognition.onresult = async function(event){
+        const transcript = event.results[0][0].transcript;
+        addOutput(`🗣️ ${transcript}`);
+        const lang = await detectLanguage(transcript);
+        speakText(transcript, lang); // Responde automáticamente
+    };
+    recognition.onerror = function(e){
+        console.error(e);
+        alert('Error de reconocimiento de voz: ' + e.error);
+    };
+}
+</script>
+
 </body>
 </html>
