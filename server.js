@@ -1,5 +1,7 @@
+// File: server.js
 // Backend completo (Node.js + Express) - integra Stripe, webhook, Gemini TTS, gestión de sesiones y VIP.
 // Requisitos: Node 18+, npm install express stripe body-parser cors node-fetch fs-extra
+
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
@@ -7,6 +9,7 @@ import Stripe from 'stripe';
 import fetch from 'node-fetch';
 import fs from 'fs-extra';
 import path from 'path';
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -33,7 +36,6 @@ app.use(express.static(PUBLIC_DIR));
 
 // Utilities
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,9);
-
 const TODAY_KEY = () => {
   const d = new Date();
   return `${d.getUTCFullYear()}-${d.getUTCMonth()+1}-${d.getUTCDate()}`;
@@ -71,7 +73,7 @@ app.post('/create-checkout-session', async (req, res) => {
   }
 });
 
-// Webhook endpoint
+// Webhook endpoint - set Stripe webhook secret in RENDER env STRIPE_WEBHOOK_SECRET
 app.post('/webhook', bodyParser.raw({type: 'application/json'}), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   try {
@@ -154,21 +156,13 @@ app.post('/webhook', bodyParser.raw({type: 'application/json'}), async (req, res
   }
 });
 
-// AI / TTS via Gemini (multi-voice)
+// --- AI / TTS Gemini SOLO AL PRESIONAR PLAY ---
 app.post('/ai-response', async (req, res) => {
   try {
     const { prompt, voice='Miguel', longForm=false } = req.body;
 
-    // Definir voces disponibles
-    const VOICES = {
-      Miguel: 'male-1',
-      Maria: 'female-1',
-      Sofia: 'female-2',
-      Carlos: 'male-2'
-    };
-    const selectedVoice = VOICES[voice] || 'male-1';
-
-    const gRes = await fetch('https://api.generative.google/v1beta1/text:synthesize', {
+    // Solo genera audio cuando el usuario presiona "play"
+    const gRes = await fetch('https://api.generative.google.com/v1beta1/text:synthesize', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.GEMINI_API_KEY}`,
@@ -176,7 +170,7 @@ app.post('/ai-response', async (req, res) => {
       },
       body: JSON.stringify({
         input: { text: prompt },
-        voice: { name: selectedVoice, languageCode: 'es-ES' },
+        voice: { name: voice==='Maria' ? 'female-1' : 'male-1', languageCode: 'es-ES' },
         audioConfig: { audioEncoding: 'MP3' }
       })
     });
@@ -188,8 +182,6 @@ app.post('/ai-response', async (req, res) => {
 
     const gJson = await gRes.json();
     const base64 = gJson.audioContent || gJson.audio || '';
-    if(!base64) return res.status(500).json({ error: 'No se recibió audio desde Gemini.' });
-
     const buffer = Buffer.from(base64, 'base64');
     const filename = `tts_${Date.now()}_${Math.random().toString(36).slice(2,8)}.mp3`;
     const filePath = path.join(PUBLIC_DIR, 'audio', filename);
@@ -200,76 +192,71 @@ app.post('/ai-response', async (req, res) => {
     DB.sessions.push({ conv });
     await saveDB();
 
-    res.json({ audio_url: publicUrl, file: filename, prompt, voice });
+    res.json({ audio_url: publicUrl, file: filename, prompt });
   } catch (err) {
     console.error('AI response error', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Create VIP initial / donation checkout
+// --- VIP Checkout ---
 app.post('/create-vip-checkout', async (req, res) => {
   try {
     const { step='initial', ref=null, currency='usd' } = req.body;
-    if(step === 'initial') {
-      const amount = 1000000;
-      const refId = ref || uid();
+    if(step==='initial'){
+      const amount=1000000;
+      const refId = ref||uid();
       const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [{ price_data: { currency, product_data: { name: 'VIP Ultra - initial $10k' }, unit_amount: amount }, quantity:1 }],
-        mode: 'payment',
-        metadata: { actionType: 'vip_initial', refId },
-        success_url: `${req.headers.origin}/success.html`,
-        cancel_url: `${req.headers.origin}/cancel.html`
+        payment_method_types:['card'],
+        line_items:[{ price_data:{ currency, product_data:{ name:'VIP Ultra - initial $10k'}, unit_amount:amount}, quantity:1}],
+        mode:'payment',
+        metadata:{ actionType:'vip_initial', refId },
+        success_url:`${req.headers.origin}/success.html`,
+        cancel_url:`${req.headers.origin}/cancel.html`
       });
-      res.json({ url: session.url, refId });
-    } else if(step === 'donation') {
-      const amount = 500000;
+      res.json({ url:session.url, refId });
+    } else if(step==='donation'){
+      const amount=500000;
       const refId = ref;
       const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [{ price_data: { currency, product_data: { name: 'VIP Ultra - donation $5k' }, unit_amount: amount }, quantity:1 }],
-        mode: 'payment',
-        metadata: { actionType: 'vip_donation', refId },
-        success_url: `${req.headers.origin}/success.html`,
-        cancel_url: `${req.headers.origin}/cancel.html`
+        payment_method_types:['card'],
+        line_items:[{ price_data:{ currency, product_data:{ name:'VIP Ultra - donation $5k'}, unit_amount:amount}, quantity:1}],
+        mode:'payment',
+        metadata:{ actionType:'vip_donation', refId },
+        success_url:`${req.headers.origin}/success.html`,
+        cancel_url:`${req.headers.origin}/cancel.html`
       });
-      res.json({ url: session.url, refId });
+      res.json({ url:session.url, refId });
     } else {
-      res.status(400).json({ error: 'Invalid VIP step' });
+      res.status(400).json({ error:'Invalid VIP step' });
     }
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch(err){ res.status(500).json({ error: err.message }); }
 });
 
-// Create micro-upsell checkout
-app.post('/create-upsell-checkout', async (req, res) => {
-  try {
-    const { type='2min', currency='usd', mood='general', voice='Miguel' } = req.body;
-    let amount = 1000;
-    let desc = 'Micro-upsell 2 min';
-    if(type === '5min'){ amount = 5000; desc = 'Micro-upsell 5 min'; }
-    if(type === 'unlimited'){ amount = 50000; desc = 'Sesion extra ilimitada'; }
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [{ price_data: { currency, product_data: { name: desc }, unit_amount: amount }, quantity:1 }],
-      mode: 'payment',
-      metadata: { actionType: 'upsell', type, mood, voice },
-      success_url: `${req.headers.origin}/success.html`,
-      cancel_url: `${req.headers.origin}/cancel.html`
+// --- Micro-upsell checkout ---
+app.post('/create-upsell-checkout', async (req,res)=>{
+  try{
+    const { type='2min', currency='usd', mood='general', voice='Miguel' }=req.body;
+    let amount=1000, desc='Micro-upsell 2 min';
+    if(type==='5min'){ amount=5000; desc='Micro-upsell 5 min'; }
+    if(type==='unlimited'){ amount=50000; desc='Sesion extra ilimitada'; }
+    const session=await stripe.checkout.sessions.create({
+      payment_method_types:['card'],
+      line_items:[{ price_data:{ currency, product_data:{ name:desc }, unit_amount:amount }, quantity:1 }],
+      mode:'payment',
+      metadata:{ actionType:'upsell', type, mood, voice },
+      success_url:`${req.headers.origin}/success.html`,
+      cancel_url:`${req.headers.origin}/cancel.html`
     });
-    res.json({ url: session.url });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    res.json({ url:session.url });
+  } catch(err){ res.status(500).json({ error: err.message }); }
 });
 
-// Endpoint admin/debug
-app.get('/admin/db', async (req, res) => res.json(DB));
+// --- Admin / debug ---
+app.get('/admin/db', async (req,res)=>{ res.json(DB); });
 
 // Graceful shutdown save
-process.on('SIGINT', async () => { await saveDB(); process.exit(); });
-process.on('SIGTERM', async () => { await saveDB(); process.exit(); });
+process.on('SIGINT', async()=>{ await saveDB(); process.exit(); });
+process.on('SIGTERM', async()=>{ await saveDB(); process.exit(); });
 
-app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+app.listen(PORT, ()=>console.log(`Server listening on port ${PORT}`));
