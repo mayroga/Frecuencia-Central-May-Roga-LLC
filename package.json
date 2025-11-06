@@ -1,0 +1,34 @@
+{
+  "name": "frecuencia-central",
+  "version": "1.0.0",
+  "description": "Plataforma Frecuencia Central - May Roga LLC",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "stripe": "^12.16.0",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "axios": "^1.7.2",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "frecuencia",
+    "IA",
+    "miguel",
+    "maría",
+    "musica",
+    "bienestar",
+    "risoterapia",
+    "stripe",
+    "gemini"
+  ],
+  "author": "Maykel Rodriguez Garcia",
+  "license": "MIT"
+}
