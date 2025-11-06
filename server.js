@@ -1,4 +1,3 @@
-// File: server.js
 // Backend completo (Node.js + Express) - integra Stripe, webhook, Gemini TTS, gestión de sesiones y VIP.
 // Requisitos: Node 18+, npm install express stripe body-parser cors node-fetch fs-extra
 import express from 'express';
@@ -8,9 +7,9 @@ import Stripe from 'stripe';
 import fetch from 'node-fetch';
 import fs from 'fs-extra';
 import path from 'path';
-
 const app = express();
 const PORT = process.env.PORT || 5000;
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Static public
@@ -28,18 +27,24 @@ const saveDB = async () => { await fs.writeJson(SESSIONS_FILE, DB, { spaces: 2 }
 
 // Middlewares
 app.use(cors());
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(PUBLIC_DIR));
 
 // Utilities
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,9);
-const TODAY_KEY = () => { const d = new Date(); return `${d.getUTCFullYear()}-${d.getUTCMonth()+1}-${d.getUTCDate()}`; };
+
+const TODAY_KEY = () => {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${d.getUTCMonth()+1}-${d.getUTCDate()}`;
+};
 
 // --- Routes ---
 
 // Health
 app.get('/health', (req,res) => res.json({ ok: true }));
+
+// Root serves index.html via static
 
 // Create Stripe Checkout Session (generic for any amount)
 app.post('/create-checkout-session', async (req, res) => {
@@ -88,7 +93,7 @@ app.post('/webhook', bodyParser.raw({type: 'application/json'}), async (req, res
           mood: session.metadata?.mood || 'unknown',
           voice: session.metadata?.voice || 'Miguel',
           userRef: refId || uid(),
-          expiresAt: Date.now() + 20 * 60 * 1000
+          expiresAt: Date.now() + (20 * 60 * 1000)
         };
         DB.sessions.push(s);
         await saveDB();
@@ -149,11 +154,19 @@ app.post('/webhook', bodyParser.raw({type: 'application/json'}), async (req, res
   }
 });
 
-// === NUEVO: Generador de audio TTS pregrabado integrado ===
+// AI / TTS via Gemini (multi-voice)
 app.post('/ai-response', async (req, res) => {
   try {
     const { prompt, voice='Miguel', longForm=false } = req.body;
-    if(!prompt || prompt.trim() === '') return res.status(400).json({ error: "Falta texto para generar audio" });
+
+    // Definir voces disponibles
+    const VOICES = {
+      Miguel: 'male-1',
+      Maria: 'female-1',
+      Sofia: 'female-2',
+      Carlos: 'male-2'
+    };
+    const selectedVoice = VOICES[voice] || 'male-1';
 
     const gRes = await fetch('https://api.generative.google/v1beta1/text:synthesize', {
       method: 'POST',
@@ -163,7 +176,7 @@ app.post('/ai-response', async (req, res) => {
       },
       body: JSON.stringify({
         input: { text: prompt },
-        voice: { name: voice==='Maria'?'female-1':'male-1', languageCode:'es-ES' },
+        voice: { name: selectedVoice, languageCode: 'es-ES' },
         audioConfig: { audioEncoding: 'MP3' }
       })
     });
@@ -175,19 +188,19 @@ app.post('/ai-response', async (req, res) => {
 
     const gJson = await gRes.json();
     const base64 = gJson.audioContent || gJson.audio || '';
-    if(!base64) return res.status(500).json({ error: 'No se recibió audio de Gemini' });
+    if(!base64) return res.status(500).json({ error: 'No se recibió audio desde Gemini.' });
 
     const buffer = Buffer.from(base64, 'base64');
     const filename = `tts_${Date.now()}_${Math.random().toString(36).slice(2,8)}.mp3`;
     const filePath = path.join(PUBLIC_DIR, 'audio', filename);
     await fs.writeFile(filePath, buffer);
-
     const publicUrl = `/audio/${filename}`;
+
     const conv = { id: uid(), prompt, voice, audio: publicUrl, created: Date.now() };
     DB.sessions.push({ conv });
     await saveDB();
 
-    res.json({ audio_url: publicUrl, file: filename, prompt });
+    res.json({ audio_url: publicUrl, file: filename, prompt, voice });
   } catch (err) {
     console.error('AI response error', err);
     res.status(500).json({ error: err.message });
@@ -225,7 +238,9 @@ app.post('/create-vip-checkout', async (req, res) => {
     } else {
       res.status(400).json({ error: 'Invalid VIP step' });
     }
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Create micro-upsell checkout
@@ -245,14 +260,16 @@ app.post('/create-upsell-checkout', async (req, res) => {
       cancel_url: `${req.headers.origin}/cancel.html`
     });
     res.json({ url: session.url });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Endpoint admin/debug
 app.get('/admin/db', async (req, res) => res.json(DB));
 
-// Graceful shutdown
+// Graceful shutdown save
 process.on('SIGINT', async () => { await saveDB(); process.exit(); });
 process.on('SIGTERM', async () => { await saveDB(); process.exit(); });
 
-app.listen(PORT, () => console.log(`✅ Server listening on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
