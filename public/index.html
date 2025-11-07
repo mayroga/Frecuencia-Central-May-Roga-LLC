@@ -5,84 +5,51 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Frecuencia Central - May Roga LLC</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
-<style>
-body {
-  margin: 0;
-  font-family: 'Montserrat', sans-serif;
-  background: linear-gradient(135deg, #000000, #1a1a1a);
-  color: #ffffff;
-}
-.container {
-  max-width: 900px;
-  margin: 50px auto;
-  padding: 25px;
-  background: rgba(30,30,30,0.95);
-  border-radius: 12px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.7);
-}
-h1 { text-align:center; color:#ffcc00; margin-bottom:10px; }
-h2 { color:#ffcc00; margin-top:30px; }
-textarea { width: 100%; padding: 12px; border-radius: 8px; border:none; font-size:16px; resize:none; margin-bottom:10px; }
-button {
-  padding: 12px 25px;
-  border:none;
-  border-radius:8px;
-  background: #ffcc00;
-  color: #000;
-  font-weight:bold;
-  cursor:pointer;
-  transition: 0.2s;
-  margin-bottom:15px;
-}
-button:hover { background:#e6b800; }
-.audio-container { margin-top:20px; }
-.session-list { margin-top:30px; border-top:1px solid #444; padding-top:15px; }
-.session-item { margin-bottom:10px; }
-.prices { display:flex; flex-wrap:wrap; justify-content:space-around; margin-top:15px; }
-.price-card {
-  background: #222;
-  padding:15px;
-  border-radius:10px;
-  width: 250px;
-  margin:10px;
-  text-align:center;
-  box-shadow: 0 0 10px rgba(0,0,0,0.6);
-}
-.price-card h3 { color:#ffcc00; margin-bottom:10px; }
-.price-card p { margin-bottom:10px; }
-.price-card button { width: 100%; }
-.slider-container { margin-top:20px; }
-label { display:block; margin-bottom:6px; color:#a0d8f1; }
-input[type=range] { width:100%; }
-.chat { margin-top:20px; background:rgba(0,0,0,0.12); padding:10px; border-radius:8px; min-height:120px; overflow:auto; }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="container">
   <h1>Frecuencia Central</h1>
-  <p id="systemMessage">Bienvenido a Frecuencia Central - May Roga LLC. <br>Por favor, escribe cómo te sientes o qué deseas lograr para comenzar tu sesión personalizada.</p>
+  <p>Bienvenido a nuestra plataforma de risoterapia y bienestar natural. Selecciona tu estado de ánimo o escribe cómo te sientes para comenzar.</p>
 
-  <h2>Tu Estado de Ánimo / Motivación</h2>
-  <textarea id="userMood" rows="3" placeholder="Escribe cómo te sientes o lo que deseas lograr..."></textarea>
+  <div class="mood-selection">
+    <label>Selecciona tu estado de ánimo:</label>
+    <select id="moodSelect">
+      <option value="love">Amor ❤️</option>
+      <option value="calm">Calma 🌿</option>
+      <option value="success">Éxito 🏆</option>
+      <option value="sad">Tristeza 😔</option>
+      <option value="neutral">Neutral 😌</option>
+    </select>
+    <textarea id="moodText" rows="2" placeholder="O escribe cómo te sientes..."></textarea>
+  </div>
 
-  <div class="slider-container">
-    <label for="volumeSlider">Ajusta tu intensidad / volumen:</label>
+  <div class="volume-control">
+    <label>Ajusta la intensidad / volumen:</label>
     <input type="range" id="volumeSlider" min="0" max="100" value="50">
   </div>
 
-  <div class="actions">
+  <div class="session-buttons">
     <button id="freeBtn">🎵 Sesión Gratis 8s</button>
     <button id="fullBtn">💳 Sesión Completa</button>
     <button id="vipBtn">🌟 Sesión VIP</button>
   </div>
 
-  <h2>Escribe y escucha (Chat IA)</h2>
-  <textarea id="userText" rows="3" placeholder="Escribe tu consulta personalizada..."></textarea>
-  <button id="playBtn">▶️ Play</button>
+  <div class="service-types">
+    <h2>Tipo de sesión</h2>
+    <button class="serviceBtn" data-type="private">Privada</button>
+    <button class="serviceBtn" data-type="personalized">Personalizada</button>
+    <button class="serviceBtn" data-type="group">Grupo</button>
+    <button class="serviceBtn" data-type="corporate">Empresa</button>
+    <button class="serviceBtn" data-type="hospital">Hospital</button>
+  </div>
+
+  <h2>Chat IA</h2>
+  <textarea id="userChat" rows="3" placeholder="Escribe tu consulta personalizada aquí..."></textarea>
+  <button id="playChatBtn">▶️ Escuchar / Enviar</button>
 
   <div class="audio-container" id="audioContainer"></div>
   <div class="session-list" id="sessionList"></div>
-  <div class="chat" id="chat"></div>
 </div>
 
 <script src="app.js"></script>
