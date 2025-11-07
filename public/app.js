@@ -1,36 +1,31 @@
-// Elementos
 const freeBtn = document.getElementById('freeBtn');
 const fullBtn = document.getElementById('fullBtn');
 const vipBtn = document.getElementById('vipBtn');
-const moodEl = document.getElementById('mood');
-const userText = document.getElementById('userText');
-const playBtn = document.getElementById('playBtn');
-const audioContainer = document.getElementById('audioContainer');
+const userMoodEl = document.getElementById('userMood');
+const userTextEl = document.getElementById('userText');
 const chatEl = document.getElementById('chat');
+const audioContainer = document.getElementById('audioContainer');
 const volumeSlider = document.getElementById('volumeSlider');
-const sessionList = document.getElementById('sessionList');
 
-// Map de pistas mp3 por estado de ánimo
-const freeAudioMap = {
-  love: '/audio/mood_love.mp3',
-  calm: '/audio/mood_calm.mp3',
-  success: '/audio/mood_success.mp3',
-  sad: '/audio/mood_sad.mp3',
-  neutral: '/audio/mood_neutral.mp3'
+let testAccess = false; // acceso de prueba interno 5 min
+const TEST_MINUTES = 5;
+
+const moodTracks = {
+  'amor': '/audio/mood_love.mp3',
+  'calma': '/audio/mood_calm.mp3',
+  'exito': '/audio/mood_success.mp3',
+  'tristeza': '/audio/mood_sad.mp3',
+  'neutral': '/audio/mood_neutral.mp3'
 };
 
-const vipAudioMap = {
-  love: '/audio/vip_love.mp3',
-  calm: '/audio/vip_calm.mp3',
-  success: '/audio/vip_success.mp3',
-  sad: '/audio/vip_sad.mp3',
-  neutral: '/audio/vip_neutral.mp3'
+const vipTracks = {
+  'amor': '/audio/vip_love.mp3',
+  'calma': '/audio/vip_calm.mp3',
+  'exito': '/audio/vip_success.mp3',
+  'tristeza': '/audio/vip_sad.mp3',
+  'neutral': '/audio/vip_neutral.mp3'
 };
 
-let testAccess = true; // Acceso de prueba interno de 5 minutos
-let testTimer;
-
-// Helper chat
 function logChat(sender, text){
   const p = document.createElement('div');
   p.innerHTML = `<strong>${sender}:</strong> ${text}`;
@@ -38,43 +33,41 @@ function logChat(sender, text){
   chatEl.scrollTop = chatEl.scrollHeight;
 }
 
-// Reproducir audio con volumen ajustable
-function playAudio(url, duration=8000){
-  const audio = new Audio(url);
-  audio.volume = volumeSlider.value/100;
+function playAudio(src){
+  const audio = new Audio(src);
+  audio.volume = volumeSlider.value / 100;
   audio.play();
-  audioContainer.innerHTML = `<audio controls autoplay src="${url}"></audio>`;
-  if(duration){
-    setTimeout(()=> logChat('Sistema', 'Sesión gratuita finalizada.'), duration);
-  }
+  return audio;
 }
 
-// Free 8s session
-freeBtn.onclick = () => {
-  const mood = moodEl.value;
-  logChat('Sistema', `Inicia sesión gratuita de 8 segundos - Estado de ánimo: ${mood}`);
-  playAudio(freeAudioMap[mood], 8000);
-  if(testAccess){
-    clearTimeout(testTimer);
-    testTimer = setTimeout(()=> logChat('Sistema', 'Fin del acceso de prueba de 5 minutos'), 5*60*1000);
-  }
+// función para reproducir sesión gratuita de 8s
+freeBtn.onclick = async () => {
+  const mood = userMoodEl.value.trim().toLowerCase() || 'neutral';
+  logChat('Sistema', `Iniciando sesión gratuita de 8 segundos para "${mood}".`);
+  const track = moodTracks[mood] || moodTracks['neutral'];
+  const audio = playAudio(track);
+  setTimeout(()=> {
+    audio.pause();
+    logChat('Sistema', 'Sesión gratuita finalizada.');
+  }, 8000);
 };
 
-// Full session (Stripe intacto)
+// flujo completo de pago (Stripe)
 fullBtn.onclick = async () => {
-  const mood = moodEl.value;
-  const amount = 5000; // ejemplo
-  const body = { amount, description: `Sesión completa ${mood}`, metadata: { actionType: 'full_session', mood, voice:'Miguel' } };
-  const res = await fetch('/create-checkout-session', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const mood = userMoodEl.value.trim() || 'neutral';
+  const amount = 5000; // ejemplo base
+  const res = await fetch('/create-checkout-session', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ amount, description: `Sesión completa ${mood}`, metadata: { actionType: 'full_session', mood } })
+  });
   const data = await res.json();
   if(data.url) window.location.href = data.url;
   else logChat('Error', 'No se pudo iniciar pago');
 };
 
-// VIP session (Stripe intacto)
+// flujo VIP intacto
 vipBtn.onclick = async () => {
-  const mood = moodEl.value;
-  playAudio(vipAudioMap[mood], null);
   const res = await fetch('/create-vip-checkout', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
@@ -82,36 +75,41 @@ vipBtn.onclick = async () => {
   });
   const data = await res.json();
   if(data.url) window.location.href = data.url;
+  else logChat('Error', 'No se pudo iniciar VIP');
 };
 
-// Play TTS / Chat IA
-playBtn.onclick = async () => {
-  const text = userText.value.trim();
+// play texto con Chat IA (OpenAI)
+document.getElementById('playBtn').addEventListener('click', async ()=>{
+  const text = userTextEl.value.trim();
   if(!text) return alert('Escribe algo primero');
+
   logChat('Usuario', text);
 
   try{
     const res = await fetch('/ai-response', {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{ 'Content-Type':'application/json' },
       body: JSON.stringify({ prompt:text, voice:'Miguel' })
     });
     const data = await res.json();
     if(data.audio_url){
-      playAudio(data.audio_url, null);
-      addSessionRecord(text, 'Miguel', data.audio_url);
+      const audioEl = document.createElement('audio');
+      audioEl.src = data.audio_url;
+      audioEl.controls = true;
+      audioEl.autoplay = true;
+      audioEl.volume = volumeSlider.value/100;
+      audioContainer.innerHTML = '';
+      audioContainer.appendChild(audioEl);
+      logChat('Sistema', 'Respuesta generada y reproducida.');
     }
-  } catch(e){
-    logChat('Error', e.message);
+  } catch(err){
+    logChat('Error', err.message);
   }
-};
+});
 
-function addSessionRecord(prompt, voice, url){
-  const item = document.createElement('div');
-  item.className = 'session-item';
-  item.innerHTML = `<strong>[${voice}]</strong>: ${prompt}<br><audio controls src="${url}"></audio>`;
-  sessionList.prepend(item);
+// acceso de prueba interno de 5 minutos
+if(testAccess){
+  logChat('Sistema', `Modo de prueba activado: acceso completo a todos los servicios durante ${TEST_MINUTES} minutos.`);
 }
 
-// Mensaje inicial
-logChat('Sistema', 'Bienvenido a Frecuencia Central. Selecciona tu estado de ánimo y pulsa sesión gratuita o completa.');
+logChat('Sistema', 'Por favor escribe tu estado de ánimo o lo que deseas lograr, luego pulsa "Sesión Gratis 8s" o "Sesión Completa".');
