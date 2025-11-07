@@ -31,7 +31,6 @@ function App() {
         ...prev,
       ]);
     }
-    // además de IA, activa vibración sonora
     playTone(freq, volume);
   };
 
@@ -43,6 +42,23 @@ function App() {
         amount,
         description: desc,
         metadata: { actionType: type },
+      }),
+    });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+  };
+
+  // 🟡 NUEVA FUNCIÓN DE DONACIÓN DIRECTA
+  const donate = async () => {
+    const amount = prompt("¿Cuánto deseas donar en USD?", "20");
+    if (!amount || isNaN(amount) || amount <= 0) return;
+    const res = await fetch("/create-checkout-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: Math.round(parseFloat(amount) * 100),
+        description: `Donación directa May Roga Organics`,
+        metadata: { actionType: "donation" },
       }),
     });
     const data = await res.json();
@@ -91,6 +107,9 @@ function App() {
         </button>
         <button onClick={() => startPayment("vip_initial", 1000000, "Sesión Exclusiva $10,000")}>
           👑 Exclusiva $10,000
+        </button>
+        <button onClick={donate}>
+          🌿 Donar a May Roga Organics
         </button>
         <button onClick={() => setChatMode(!chatMode)}>
           💬 {chatMode ? "Cerrar Chat IA" : "Consulta Personalizada"}
