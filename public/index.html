@@ -1,24 +1,98 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Frecuencia Central - May Roga LLC</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <div id="root"></div>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frecuencia Central - May Roga LLC</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body {
+  margin: 0;
+  font-family: 'Montserrat', sans-serif;
+  background: linear-gradient(135deg, #1a1a1a, #000000);
+  color: #ffffff;
+}
+.container {
+  max-width: 900px;
+  margin: 50px auto;
+  padding: 25px;
+  background: rgba(30,30,30,0.95);
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.7);
+}
+h1 { text-align:center; color:#ffcc00; margin-bottom:10px; }
+h2 { color:#ffcc00; margin-top:30px; }
+textarea { width: 100%; padding: 12px; border-radius: 8px; border:none; font-size:16px; resize:none; margin-bottom:10px; }
+button {
+  padding: 12px 25px;
+  border:none;
+  border-radius:8px;
+  background: #ffcc00;
+  color: #000;
+  font-weight:bold;
+  cursor:pointer;
+  transition: 0.2s;
+  margin-bottom:15px;
+}
+button:hover { background:#e6b800; }
+.audio-container { margin-top:20px; }
+.session-list { margin-top:30px; border-top:1px solid #444; padding-top:15px; }
+.session-item { margin-bottom:10px; }
+.prices { display:flex; flex-wrap:wrap; justify-content:space-around; margin-top:15px; }
+.price-card {
+  background: #222;
+  padding:15px;
+  border-radius:10px;
+  width: 250px;
+  margin:10px;
+  text-align:center;
+  box-shadow: 0 0 10px rgba(0,0,0,0.6);
+}
+.price-card h3 { color:#ffcc00; margin-bottom:10px; }
+.price-card p { margin-bottom:10px; }
+.price-card button { width: 100%; }
+.slider-container { margin-top:15px; }
+label { display:block; margin-bottom:5px; color:#00bfff; font-weight:bold; }
+input[type="range"] { width: 100%; }
+.mood-options { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.mood-options button { background:#00bfff; color:#000; font-weight:700; }
+.chat { margin-top:12px; background:rgba(0,0,0,0.12); padding:10px; border-radius:8px; min-height:120px; overflow:auto; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Frecuencia Central</h1>
+  <p id="welcomeMessage">Bienvenido a nuestra plataforma de risoterapia y bienestar natural. Selecciona tu estado de ánimo para comenzar.</p>
 
-    <!-- React y Tone.js -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/tone/build/Tone.js"></script>
+  <h2>Selecciona tu estado de ánimo</h2>
+  <div class="mood-options">
+    <button class="moodBtn" data-mood="love">Amor ❤️</button>
+    <button class="moodBtn" data-mood="calm">Calma 🌿</button>
+    <button class="moodBtn" data-mood="success">Éxito 🏆</button>
+    <button class="moodBtn" data-mood="sad">Tristeza 😔</button>
+    <button class="moodBtn" data-mood="neutral">Neutral 😌</button>
+  </div>
 
-    <!-- Archivos locales -->
-    <script src="tones.js"></script>
-    <script src="chatIA.js"></script>
-    <script type="text/babel" src="app.js"></script>
-  </body>
+  <div class="slider-container">
+    <label for="volumeSlider">Ajusta tu intensidad / volumen:</label>
+    <input type="range" id="volumeSlider" min="0" max="100" value="50">
+  </div>
+
+  <div style="margin-top:20px;">
+    <button id="freeBtn">🎵 Sesión Gratis 8s</button>
+    <button id="fullBtn">💳 Sesión Completa</button>
+    <button id="vipBtn">🌟 Sesión VIP</button>
+  </div>
+
+  <h2>Escribe y escucha (Chat IA)</h2>
+  <textarea id="userText" rows="4" placeholder="Escribe tu mensaje aquí..."></textarea>
+  <button id="playBtn">▶️ Play</button>
+
+  <div class="audio-container" id="audioContainer"></div>
+  <div class="session-list" id="sessionList"></div>
+  <div class="chat" id="chat"></div>
+</div>
+
+<script src="app.js"></script>
+</body>
 </html>
