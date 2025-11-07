@@ -1,135 +1,24 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Frecuencia Central - May Roga LLC</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
-<style>
-body {
-  margin: 0;
-  font-family: 'Montserrat', sans-serif;
-  background: linear-gradient(135deg, #1a1a1a, #000000);
-  color: #ffffff;
-}
-.container {
-  max-width: 900px;
-  margin: 50px auto;
-  padding: 25px;
-  background: rgba(30,30,30,0.95);
-  border-radius: 12px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.7);
-}
-h1 { text-align:center; color:#ffcc00; margin-bottom:10px; }
-h2 { color:#ffcc00; margin-top:30px; }
-textarea { width: 100%; padding: 12px; border-radius: 8px; border:none; font-size:16px; resize:none; margin-bottom:10px; }
-button {
-  padding: 12px 25px;
-  border:none;
-  border-radius:8px;
-  background: #ffcc00;
-  color: #000;
-  font-weight:bold;
-  cursor:pointer;
-  transition: 0.2s;
-  margin-bottom:15px;
-}
-button:hover { background:#e6b800; }
-.audio-container { margin-top:20px; }
-.session-list { margin-top:30px; border-top:1px solid #444; padding-top:15px; }
-.session-item { margin-bottom:10px; }
-.prices { display:flex; flex-wrap:wrap; justify-content:space-around; margin-top:15px; }
-.price-card {
-  background: #222;
-  padding:15px;
-  border-radius:10px;
-  width: 250px;
-  margin:10px;
-  text-align:center;
-  box-shadow: 0 0 10px rgba(0,0,0,0.6);
-}
-.price-card h3 { color:#ffcc00; margin-bottom:10px; }
-.price-card p { margin-bottom:10px; }
-.price-card button { width: 100%; }
-</style>
-</head>
-<body>
-<div class="container">
-  <h1>Frecuencia Central</h1>
-  <p>Bienvenido a nuestra aplicación de risoterapia y bienestar natural. Aquí puedes escribir tu mensaje y escucharlo con nuestra voz especial. Todos nuestros servicios están disponibles en línea.</p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frecuencia Central - May Roga LLC</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="root"></div>
 
-  <h2>Servicios y Precios</h2>
-  <div class="prices">
-    <div class="price-card">
-      <h3>Micro-sesión 2 min</h3>
-      <p>$10 USD</p>
-      <button onclick="window.open('/create-upsell?type=2min')">Pagar</button>
-    </div>
-    <div class="price-card">
-      <h3>Micro-sesión 5 min</h3>
-      <p>$50 USD</p>
-      <button onclick="window.open('/create-upsell?type=5min')">Pagar</button>
-    </div>
-    <div class="price-card">
-      <h3>Sesión ilimitada</h3>
-      <p>$500 USD</p>
-      <button onclick="window.open('/create-upsell?type=unlimited')">Pagar</button>
-    </div>
-  </div>
+    <!-- React y Tone.js -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/tone/build/Tone.js"></script>
 
-  <h2>Escribe y escucha</h2>
-  <textarea id="userText" rows="4" placeholder="Escribe aquí..."></textarea>
-  <button id="playBtn">▶️ Play</button>
-
-  <div class="audio-container" id="audioContainer"></div>
-
-  <div class="session-list" id="sessionList"></div>
-</div>
-
-<script>
-async function detectLanguage(text) {
-  try {
-    const res = await fetch('https://libretranslate.de/detect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: text })
-    });
-    const data = await res.json();
-    return data[0].language || 'es';
-  } catch(e){ return 'es'; }
-}
-
-async function playText() {
-  const text = document.getElementById('userText').value.trim();
-  if(!text) return alert('Escribe algo primero');
-
-  const lang = await detectLanguage(text);
-  const voice = (lang === 'es') ? 'Miguel' : 'Maria';
-
-  const res = await fetch('/ai-response', {
-    method:'POST',
-    headers:{ 'Content-Type':'application/json' },
-    body: JSON.stringify({ prompt:text, voice })
-  });
-  const data = await res.json();
-  if(data.audio_url){
-    const audioContainer = document.getElementById('audioContainer');
-    audioContainer.innerHTML = `<audio controls autoplay src="${data.audio_url}"></audio>`;
-    addSessionRecord(text, voice, data.audio_url);
-  } else {
-    alert('Error generando audio');
-  }
-}
-
-function addSessionRecord(prompt, voice, url){
-  const list = document.getElementById('sessionList');
-  const item = document.createElement('div');
-  item.className = 'session-item';
-  item.innerHTML = `<strong>[${voice}]</strong>: ${prompt} <br><audio controls src="${url}"></audio>`;
-  list.prepend(item);
-}
-
-document.getElementById('playBtn').addEventListener('click', playText);
-</script>
-</body>
+    <!-- Archivos locales -->
+    <script src="tones.js"></script>
+    <script src="chatIA.js"></script>
+    <script type="text/babel" src="app.js"></script>
+  </body>
 </html>
