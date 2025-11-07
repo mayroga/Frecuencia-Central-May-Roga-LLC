@@ -1,106 +1,116 @@
-// File: public/app.js
-// Frontend logic: controla sesiones gratis, sesiones completas, VIP flow, micro-upsells y reproducción TTS/Audio
-const freeBtn = document.getElementById('freeBtn');
-const fullBtn = document.getElementById('fullBtn');
-const vipBtn = document.getElementById('vipBtn');
-const moodEl = document.getElementById('mood');
-const voiceEl = document.getElementById('voice');
-const audioEl = document.getElementById('audio');
-const chatEl = document.getElementById('chat');
-const upsellBtns = document.querySelectorAll('.upsellBtn');
+const { useState, useEffect } = React;
 
-function logChat(sender, text){
-  const p = document.createElement('div');
-  p.innerHTML = `<strong>${sender}:</strong> ${text}`;
-  chatEl.appendChild(p);
-  chatEl.scrollTop = chatEl.scrollHeight;
-}
+function App() {
+  const [text, setText] = useState("");
+  const [lang, setLang] = useState("es");
+  const [freq, setFreq] = useState(432);
+  const [volume, setVolume] = useState(0.5);
+  const [voice, setVoice] = useState("Miguel");
+  const [chatMode, setChatMode] = useState(false);
+  const [sessions, setSessions] = useState([]);
 
-// helper to call /ai-response and play returned audio
-async function callAIAndPlay(prompt, voice){
-  try{
-    logChat('Sistema', 'Generando respuesta de IA...');
-    const res = await fetch('/ai-response', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ prompt, voice })
+  useEffect(() => {
+    const langDetect = navigator.language || "es";
+    setLang(langDetect.startsWith("es") ? "es" : "en");
+  }, []);
+
+  const handlePlay = async () => {
+    if (!text.trim()) return alert("Escribe algo primero.");
+    const res = await fetch("/ai-response", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: text, voice }),
     });
     const data = await res.json();
-    if(data.audio_url){
-      audioEl.src = data.audio_url;
-      await audioEl.play().catch(()=>{ /* autoplay policy */ });
-      logChat(voice, prompt);
-    } else {
-      logChat('Error', 'No se pudo generar audio');
+    if (data.audio_url) {
+      const a = new Audio(data.audio_url);
+      a.volume = volume;
+      a.play();
+      setSessions((prev) => [
+        { text, url: data.audio_url, voice },
+        ...prev,
+      ]);
     }
-  } catch(err){
-    logChat('Error', err.message);
-  }
+    // además de IA, activa vibración sonora
+    playTone(freq, volume);
+  };
+
+  const startPayment = async (type, amount, desc) => {
+    const res = await fetch("/create-checkout-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount,
+        description: desc,
+        metadata: { actionType: type },
+      }),
+    });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+  };
+
+  return (
+    <div className="container">
+      <h1>Frecuencia Central</h1>
+      <p>
+        Sesiones de terapia vibracional, música y bienestar natural. Ajusta tu frecuencia, volumen y consulta personalizada si lo deseas.
+      </p>
+
+      <div className="controls">
+        <label>Frecuencia: {freq} Hz</label>
+        <input
+          type="range"
+          min="396"
+          max="963"
+          step="1"
+          value={freq}
+          onChange={(e) => setFreq(e.target.value)}
+        />
+        <label>Volumen: {(volume * 100).toFixed(0)}%</label>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value={volume}
+          onChange={(e) => setVolume(parseFloat(e.target.value))}
+        />
+      </div>
+
+      <textarea
+        rows="3"
+        value={text}
+        placeholder="Escribe cómo te sientes..."
+        onChange={(e) => setText(e.target.value)}
+      />
+
+      <div className="actions">
+        <button onClick={handlePlay}>▶️ Play Terapia</button>
+        <button onClick={() => startPayment("full_session", 5000, "Sesión Completa $50")}>
+          💎 Sesión Completa $50
+        </button>
+        <button onClick={() => startPayment("vip_initial", 1000000, "Sesión Exclusiva $10,000")}>
+          👑 Exclusiva $10,000
+        </button>
+        <button onClick={() => setChatMode(!chatMode)}>
+          💬 {chatMode ? "Cerrar Chat IA" : "Consulta Personalizada"}
+        </button>
+      </div>
+
+      {chatMode && <ChatIA />}
+
+      <div className="session-list">
+        <h2>Historial de Sesiones</h2>
+        {sessions.map((s, i) => (
+          <div key={i} className="session-item">
+            <strong>[{s.voice}]</strong> {s.text}
+            <br />
+            <audio controls src={s.url}></audio>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-// Free 30s session
-freeBtn.onclick = async () => {
-  const mood = moodEl.value;
-  const voice = voiceEl.value;
-  logChat('Usuario', `Inicia sesión gratis 30s - ${mood} - atendido por ${voice}`);
-  // AI greeting
-  await callAIAndPlay(`Bienvenido. Iniciando sesión gratuita de 30 segundos para estado ${mood}. Respira profundo.`, voice);
-  // play a short frequency audio generated by server as TTS or static sample
-  setTimeout(()=> {
-    logChat('Sistema', 'Sesión gratuita finalizada.');
-  }, 30000);
-};
-
-// Full session (charge via Stripe)
-fullBtn.onclick = async () => {
-  const mood = moodEl.value;
-  const voice = voiceEl.value;
-  // amount dynamic: base example $50 = 5000 cents. Could be adjusted based on mood or plan
-  const amount = 5000;
-  const body = { amount, description: `Sesión completa ${mood}`, metadata: { actionType: 'full_session', mood, voice } };
-  const res = await fetch('/create-checkout-session', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-  const data = await res.json();
-  if(data.url){
-    window.location.href = data.url;
-  } else {
-    logChat('Error', 'No se pudo iniciar pago');
-  }
-};
-
-// VIP button - two-step: initial $10k then $5k donation
-vipBtn.onclick = async () => {
-  const voice = voiceEl.value;
-  // step 1 - initial $10k
-  const res = await fetch('/create-vip-checkout', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ step:'initial' })
-  });
-  const data = await res.json();
-  if(data.url){
-    // redirect user to pay initial $10k
-    window.location.href = data.url;
-  } else {
-    logChat('Error', 'No se pudo iniciar VIP');
-  }
-};
-
-// Upsells
-upsellBtns.forEach(b=>{
-  b.addEventListener('click', async (e)=>{
-    const type = e.currentTarget.dataset.type;
-    const body = { type, mood: moodEl.value, voice: voiceEl.value };
-    const res = await fetch('/create-upsell-checkout', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-    const d = await res.json();
-    if(d.url) window.location.href = d.url;
-    else logChat('Error', 'No se pudo iniciar pago de upsell');
-  });
-});
-
-// Auto-detect language helper (placeholder, can be improved)
-async function detectLanguageAndGreet(){
-  // Attempt to use browser language
-  const lang = navigator.language || navigator.userLanguage || 'es';
-  logChat('Sistema', `Idioma detectado: ${lang}`);
-}
-detectLanguageAndGreet();
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
