@@ -1,32 +1,64 @@
 # Frecuencia Central - May Roga LLC
 
-**Plataforma web de bienestar y risoterapia con música generativa y frecuencias terapéuticas.**
+**Plataforma de terapia vibracional, música y bienestar natural con IA y Stripe**
 
 ---
 
-## 🔹 Descripción
+## Descripción
 
-Frecuencia Central es una aplicación web que permite a los usuarios seleccionar su estado de ánimo y generar automáticamente música y frecuencias terapéuticas basadas en ese ánimo. Incluye:
+Frecuencia Central permite a los usuarios experimentar sesiones de bienestar personalizadas combinando:
 
-- Sesiones gratuitas y completas.
-- Sesiones VIP exclusivas.
-- Chat IA integrado (texto + TTS vía Gemini API).
-- Reproducción de música y frecuencia en tiempo real.
-- Pagos y donaciones con Stripe.
-- Interfaz moderna tipo app espiritual (negro con luces suaves, tonos dorados, letras azules).
+- Música y frecuencias vibracionales ajustables.
+- Estados de ánimo para guiar la sesión.
+- Chat IA activo desde el inicio para consultas personalizadas.
+- Sesiones gratuitas de prueba.
+- Acceso a micro-sesiones, sesiones completas y VIP.
 
----
-
-## 🔹 Características principales
-
-- **Módulo de emociones:** El usuario elige cómo desea sentirse (amor, alegría, energía, éxito, calma, tristeza, etc.).
-- **Música generativa:** Se reproducen pistas pregrabadas o generadas con Tone.js.
-- **Ajuste de intensidad:** El usuario puede modificar frecuencia/volumen con un slider.
-- **IA conversacional:** Interacción automática y explicaciones sobre el estado emocional elegido.
-- **Pagos y donaciones:** Stripe integrado para sesiones completas, VIP y micro-upsells.
-- **Persistencia:** Registro de sesiones en JSON local para seguimiento.
+El sistema permite reproducir pistas pregrabadas o generadas por IA según el estado de ánimo del usuario. Todo se integra con pagos seguros mediante Stripe.
 
 ---
 
-## 🔹 Estructura de carpetas
+## Funcionalidades principales
 
+- Guía inicial del usuario con selección de estado de ánimo.
+- Sesión gratuita de 8 segundos con temporizador y aviso al finalizar.
+- Ajuste de volumen/intensidad (slider) para frecuencia + música.
+- Chat IA activo desde el inicio y disponible para consultas personalizadas.
+- Reproducción de audio según el estado de ánimo usando pistas mp3 pregrabadas.
+- Micro-sesiones y sesiones VIP, con pagos a través de Stripe.
+- Registro de sesiones en JSON para historial.
+- Acceso especial de prueba de 5 minutos a todos los servicios (para administrador o pruebas internas).
+
+---
+
+## Instalación
+
+1. Clonar el repositorio:
+
+```bash
+git clone https://github.com/tuusuario/frecuencia-central.git
+cd frecuencia-central
+npm install
+/public
+    /audio       <-- pistas mp3
+    /data        <-- sesiones y DB en JSON
+    index.html
+    app.js
+    style.css
+server.js
+package.json
+README.md
+Notas
+
+Las pistas de audio deben colocarse en /public/audio con nombres predefinidos según estado de ánimo.
+
+No se requieren cambios adicionales para Stripe o Gemini, el backend ya maneja pagos y generación de audio TTS.
+
+Esta versión está lista para producción en Render o cualquier servidor compatible con Node.js 18+.
+
+Sesión de prueba interna: puedes probar todos los servicios 5 minutos usando la cuenta de prueba sin revelar a los usuarios.
+
+Autor
+
+Maykel Rodriguez Garcia
+May Roga LLC - Terapia de bienestar y risoterapia en línea
