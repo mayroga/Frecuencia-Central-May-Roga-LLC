@@ -1,7 +1,7 @@
 {
   "name": "frecuencia-central",
   "version": "1.0.0",
-  "description": "Plataforma Frecuencia Central - May Roga LLC",
+  "description": "Frecuencia Central - Terapia de Risa, Vibración y Bienestar Natural (May Roga LLC)",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -23,13 +23,12 @@
   "keywords": [
     "frecuencia",
     "IA",
-    "miguel",
-    "maría",
-    "musica",
+    "May Roga",
     "bienestar",
     "risoterapia",
     "stripe",
-    "gemini"
+    "donaciones",
+    "organics"
   ],
   "author": "Maykel Rodriguez Garcia",
   "license": "MIT"
