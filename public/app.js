@@ -1,112 +1,127 @@
+// Archivo: public/app.js
 const freeBtn = document.getElementById('freeBtn');
 const fullBtn = document.getElementById('fullBtn');
 const vipBtn = document.getElementById('vipBtn');
-const moodSelect = document.getElementById('moodSelect');
-const moodText = document.getElementById('moodText');
-const volumeSlider = document.getElementById('volumeSlider');
-const sessionList = document.getElementById('sessionList');
+const moodEl = document.getElementById('mood');
+const intensityEl = document.getElementById('intensity');
+const sessionTypeEl = document.getElementById('sessionType');
+const userTextEl = document.getElementById('userText');
+const playBtn = document.getElementById('playBtn');
 const audioContainer = document.getElementById('audioContainer');
-const playChatBtn = document.getElementById('playChatBtn');
-const userChat = document.getElementById('userChat');
-const serviceBtns = document.querySelectorAll('.serviceBtn');
+const chatEl = document.getElementById('chat');
 
-let currentMood = 'neutral';
-let sessionType = 'private';
-let testAccessUsed = false;
+let testAccessActive = false;
 
-const moodFiles = {
-  love: '/audio/mood_love.mp3',
-  calm: '/audio/mood_calm.mp3',
-  success: '/audio/mood_success.mp3',
-  sad: '/audio/mood_sad.mp3',
-  neutral: '/audio/mood_neutral.mp3'
-};
-
-const vipFiles = {
-  love: '/audio/vip_love.mp3',
-  calm: '/audio/vip_calm.mp3',
-  success: '/audio/vip_success.mp3',
-  sad: '/audio/vip_sad.mp3',
-  neutral: '/audio/vip_neutral.mp3'
-};
-
-function logSession(message) {
-  const item = document.createElement('div');
-  item.innerHTML = message;
-  sessionList.prepend(item);
-}
-
-function getMood() {
-  return moodText.value.trim() || moodSelect.value || 'neutral';
-}
-
-function playAudio(file) {
-  audioContainer.innerHTML = `<audio id="sessionAudio" src="${file}" autoplay></audio>`;
-  const audio = document.getElementById('sessionAudio');
-  audio.volume = volumeSlider.value / 100;
-}
-
-serviceBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    sessionType = btn.dataset.type;
-    logSession(`Sistema: Has seleccionado sesión tipo <strong>${sessionType}</strong>`);
-  });
-});
-
-freeBtn.onclick = () => {
-  if (!testAccessUsed) {
-    testAccessUsed = true;
-    logSession('Sistema: Acceso de prueba de 5 minutos activado.');
-    setTimeout(()=> logSession('Sistema: Fin del acceso de prueba.'), 5*60*1000);
+// Audio map
+const audioMap = {
+  mood: {
+    love: '/audio/mood_love.mp3',
+    calm: '/audio/mood_calm.mp3',
+    success: '/audio/mood_success.mp3',
+    sad: '/audio/mood_sad.mp3',
+    neutral: '/audio/mood_neutral.mp3'
+  },
+  vip: {
+    love: '/audio/vip_love.mp3',
+    calm: '/audio/vip_calm.mp3',
+    success: '/audio/vip_success.mp3',
+    sad: '/audio/vip_sad.mp3',
+    neutral: '/audio/vip_neutral.mp3'
   }
-  const mood = getMood();
-  logSession(`Sistema: Iniciando sesión gratuita de 8 segundos para estado <strong>${mood}</strong>`);
-  playAudio(moodFiles[mood]);
-  setTimeout(()=> logSession('Sistema: Sesión gratuita finalizada.'), 8000);
 };
 
+function logChat(sender, text) {
+  const p = document.createElement('div');
+  p.innerHTML = `<strong>${sender}:</strong> ${text}`;
+  chatEl.appendChild(p);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+// Reproduce audio según estado de ánimo y tipo de sesión
+function playMoodAudio(mood, type='mood') {
+  const src = audioMap[type][mood];
+  if (!src) return;
+  const audio = new Audio(src);
+  audio.volume = intensityEl.value / 100;
+  audio.play();
+  return audio;
+}
+
+// Sesión gratuita 8s
+freeBtn.onclick = async () => {
+  const mood = moodEl.value;
+  const type = sessionTypeEl.value;
+  logChat('Sistema', `Iniciando sesión gratuita de 8 segundos para estado ${mood} y sesión ${type}`);
+  
+  const audio = playMoodAudio(mood, 'mood');
+  
+  setTimeout(()=> {
+    if(audio) audio.pause();
+    logChat('Sistema', 'Sesión gratuita finalizada.');
+  }, 8000);
+};
+
+// Sesión completa con Stripe
 fullBtn.onclick = async () => {
-  const mood = getMood();
-  const body = { amount: 5000, description:`Sesión completa ${mood}`, metadata:{ actionType:'full_session', mood, voice:'Miguel', sessionType } };
-  const res = await fetch('/create-checkout-session',{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const mood = moodEl.value;
+  const type = sessionTypeEl.value;
+  const amount = 5000; // $50 ejemplo
+  const res = await fetch('/create-checkout-session', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ amount, description:`Sesión completa ${mood}`, metadata:{actionType:'full_session', mood, voice:'Miguel', sessionType:type}})
+  });
   const data = await res.json();
   if(data.url) window.location.href = data.url;
-  else logSession('Error: no se pudo iniciar el pago.');
+  else logChat('Error','No se pudo iniciar pago');
 };
 
+// Sesión VIP con Stripe
 vipBtn.onclick = async () => {
-  const mood = getMood();
-  const body = { step:'initial', metadata:{ mood, sessionType } };
-  const res = await fetch('/create-vip-checkout',{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  const type = sessionTypeEl.value;
+  const res = await fetch('/create-vip-checkout',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({step:'initial', sessionType:type})
+  });
   const data = await res.json();
   if(data.url) window.location.href = data.url;
-  else logSession('Error: no se pudo iniciar VIP.');
+  else logChat('Error','No se pudo iniciar VIP');
 };
 
-playChatBtn.onclick = async () => {
-  const text = userChat.value.trim();
+// Chat IA
+async function sendAIMessage() {
+  const text = userTextEl.value.trim();
   if(!text) return alert('Escribe algo primero');
-  logSession(`<strong>Usuario:</strong> ${text}`);
-  const res = await fetch('/ai-response',{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt:text, voice:'Miguel'})});
-  const data = await res.json();
-  if(data.audio_url){
-    playAudio(data.audio_url);
-    logSession(`<strong>Sistema:</strong> Respuesta generada y reproducida.`);
-  } else {
-    logSession('Error generando audio.');
+
+  logChat('Usuario', text);
+  const mood = moodEl.value;
+  const type = testAccessActive ? 'vip' : 'mood';
+
+  // Reproduce audio correspondiente
+  playMoodAudio(mood, type);
+
+  try {
+    const res = await fetch('/ai-response',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({prompt:text, voice:'Miguel'})
+    });
+    const data = await res.json();
+    if(data.audio_url){
+      audioContainer.innerHTML = `<audio controls autoplay src="${data.audio_url}"></audio>`;
+      logChat('Sistema', 'Respuesta de IA generada y reproducida.');
+    } else {
+      logChat('Sistema','Error generando audio de IA');
+    }
+  } catch(err){
+    logChat('Error', err.message);
   }
-};
+}
 
-moodSelect.addEventListener('change', ()=> {
-  currentMood = moodSelect.value;
-  logSession(`Sistema: Estado de ánimo seleccionado: ${currentMood}`);
-});
+// Botón enviar chat
+playBtn.addEventListener('click', sendAIMessage);
 
-moodText.addEventListener('input', ()=> {
-  currentMood = moodText.value.trim();
-});
-
-volumeSlider.addEventListener('input', ()=> {
-  const audio = document.getElementById('sessionAudio');
-  if(audio) audio.volume = volumeSlider.value/100;
-});
+// Acceso de prueba de 5 minutos (oculto)
+testAccessActive = true;
+logChat('Sistema', 'Acceso de prueba de 5 minutos activado.');
