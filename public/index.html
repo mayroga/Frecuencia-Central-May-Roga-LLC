@@ -12,44 +12,39 @@
   <h1>Frecuencia Central</h1>
   <p>Bienvenido a nuestra plataforma de risoterapia y bienestar natural. Selecciona tu estado de ánimo o escribe cómo te sientes para comenzar.</p>
 
-  <div class="mood-selection">
-    <label>Selecciona tu estado de ánimo:</label>
-    <select id="moodSelect">
-      <option value="love">Amor ❤️</option>
-      <option value="calm">Calma 🌿</option>
-      <option value="success">Éxito 🏆</option>
-      <option value="sad">Tristeza 😔</option>
-      <option value="neutral">Neutral 😌</option>
-    </select>
-    <textarea id="moodText" rows="2" placeholder="O escribe cómo te sientes..."></textarea>
-  </div>
+  <h2>Selecciona tu estado de ánimo:</h2>
+  <select id="mood">
+    <option value="love">Amor ❤️</option>
+    <option value="calm">Calma 🌿</option>
+    <option value="success">Éxito 🏆</option>
+    <option value="sad">Tristeza 😔</option>
+    <option value="neutral">Neutral 😌</option>
+  </select>
 
-  <div class="volume-control">
-    <label>Ajusta la intensidad / volumen:</label>
-    <input type="range" id="volumeSlider" min="0" max="100" value="50">
-  </div>
+  <label for="intensity">Ajusta la intensidad / volumen:</label>
+  <input type="range" id="intensity" min="0" max="100" value="50">
 
-  <div class="session-buttons">
+  <h2>Tipo de sesión</h2>
+  <select id="sessionType">
+    <option value="private">Privada</option>
+    <option value="personalized">Personalizada</option>
+    <option value="group">Grupo</option>
+    <option value="corporate">Empresa</option>
+    <option value="hospital">Hospital</option>
+  </select>
+
+  <div class="actions">
     <button id="freeBtn">🎵 Sesión Gratis 8s</button>
     <button id="fullBtn">💳 Sesión Completa</button>
     <button id="vipBtn">🌟 Sesión VIP</button>
   </div>
 
-  <div class="service-types">
-    <h2>Tipo de sesión</h2>
-    <button class="serviceBtn" data-type="private">Privada</button>
-    <button class="serviceBtn" data-type="personalized">Personalizada</button>
-    <button class="serviceBtn" data-type="group">Grupo</button>
-    <button class="serviceBtn" data-type="corporate">Empresa</button>
-    <button class="serviceBtn" data-type="hospital">Hospital</button>
-  </div>
+  <h2>Escribe y escucha (Chat IA)</h2>
+  <textarea id="userText" rows="4" placeholder="Escribe aquí cómo te sientes..."></textarea>
+  <button id="playBtn">▶️ Escuchar / Enviar</button>
 
-  <h2>Chat IA</h2>
-  <textarea id="userChat" rows="3" placeholder="Escribe tu consulta personalizada aquí..."></textarea>
-  <button id="playChatBtn">▶️ Escuchar / Enviar</button>
-
-  <div class="audio-container" id="audioContainer"></div>
-  <div class="session-list" id="sessionList"></div>
+  <div id="audioContainer" class="audio-container"></div>
+  <div id="chat" class="chat"></div>
 </div>
 
 <script src="app.js"></script>
