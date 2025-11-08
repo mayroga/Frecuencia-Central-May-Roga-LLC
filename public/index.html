@@ -1,60 +1,185 @@
+<!-- ======================= public/index.html ======================= -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Frecuencia Central - May Roga LLC</title>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-<style>
-  body { font-family: 'Montserrat', sans-serif; background: #f0f4f8; color: #222; margin:0; padding:0;}
-  .container { max-width:800px; margin:20px auto; padding:20px; background:#fff; border-radius:15px; box-shadow:0 4px 20px rgba(0,0,0,0.1);}
-  h1,h2 { text-align:center; color:#444;}
-  select, textarea, button { width:100%; padding:10px; margin:5px 0; border-radius:10px; border:1px solid #ccc; font-size:16px;}
-  .actions { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:15px 0;}
-  .btn-free, .btn-session { flex:1 1 30%; cursor:pointer; font-weight:700; border:none; background:#4caf50; color:#fff; transition:0.3s;}
-  .btn-free:hover, .btn-session:hover { background:#45a049;}
-  #chat { height:250px; overflow-y:auto; border:1px solid #ccc; padding:10px; border-radius:10px; background:#f9f9f9;}
-  #audioContainer audio { width:100%; margin-top:10px; }
-  #followUp { margin-top:10px; background:#2196f3; color:#fff; cursor:pointer; border:none; border-radius:10px; padding:10px; font-weight:700;}
-  #followUp:hover { background:#1976d2; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frecuencia Central by May Roga</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#1e1e2f; color:#fff; display:flex; flex-direction:column; align-items:center; }
+    h1 { margin-top:20px; }
+    #buttons, #chatContainer { margin-top:20px; width:90%; max-width:600px; }
+    button { padding:15px; margin:5px; border:none; border-radius:10px; font-size:16px; cursor:pointer; }
+    #chat { background:#2b2b3f; padding:10px; height:250px; overflow-y:auto; border-radius:10px; margin-bottom:10px; }
+    input[type="text"]{ width:70%; padding:10px; border-radius:10px; border:none; margin-right:5px; }
+    select{ padding:10px; border-radius:10px; margin-right:5px; }
+    #audioContainer{ margin-top:10px; }
+  </style>
 </head>
 <body>
-<div class="container">
-  <h1>Frecuencia Central</h1>
-  <p>Transforma lo que sientes en respuesta musical, sonora y vibratoria, guiada por nuestra IA empática.</p>
-
-  <h2>Botones rápidos</h2>
-  <div class="actions">
-    <button class="btn-free" data-need="miedo">Me siento asustado</button>
-    <button class="btn-free" data-need="dinero">Poco o nada de dinero</button>
-    <button class="btn-free" data-need="energia">Aburrido / Energía baja</button>
-    <button class="btn-free" data-need="amor">Quiero amor / Intimidad</button>
-    <button class="btn-free" data-need="duelo">Perdí a alguien</button>
-    <button class="btn-free" data-need="seguridad">Necesito seguridad/confianza</button>
+  <h1>Frecuencia Central by May Roga</h1>
+  <div id="buttons">
+    <div>
+      <button id="freeBtn">Sesión gratuita</button>
+      <button id="fullBtn">Sesión completa</button>
+      <button id="vipBtn">Sesión VIP</button>
+    </div>
+    <div style="margin-top:10px;">
+      <select id="mood">
+        <option value="neutral">Neutral</option>
+        <option value="calm">Calma</option>
+        <option value="love">Amor</option>
+        <option value="success">Éxito</option>
+        <option value="sad">Tristeza</option>
+      </select>
+      <select id="sessionType">
+        <option value="mood">Básico</option>
+        <option value="personalized">Premium individual</option>
+        <option value="corporate">Corporativo</option>
+        <option value="hospital">Hospitalario</option>
+        <option value="private">VIP</option>
+      </select>
+    </div>
   </div>
 
-  <h2>Campo libre</h2>
-  <textarea id="userText" rows="4" placeholder="Escribe cómo te sientes o lo que deseas…"></textarea>
-  <button id="playBtn">▶️ Escuchar / Enviar</button>
-
-  <div id="audioContainer"></div>
-  <div id="chat"></div>
-
-  <h2>Opciones de pago / sesiones completas</h2>
-  <div class="actions">
-    <button class="btn-session" data-need="basico">🎵 Básico ($20)</button>
-    <button class="btn-session" data-need="premium">🌈 Premium Individual ($50–$250)</button>
-    <button class="btn-session" data-need="corporate">🏢 Corporativo ($500–$1500)</button>
-    <button class="btn-session" data-need="hospital">🏥 Hospitalario ($400–$1000)</button>
-    <button class="btn-session" data-need="vip">👑 VIP / Ultra ($5000)</button>
+  <div id="chatContainer">
+    <div id="chat"></div>
+    <input type="text" id="userText" placeholder="Escribe lo que sientes o deseas">
+    <button id="playBtn">Enviar</button>
+    <div id="audioContainer"></div>
   </div>
 
-  <button id="followUp">🔄 Revisar estado emocional</button>
-</div>
-
-<script src="app.js"></script>
-<script src="chatIA.js" type="module"></script>
+  <script src="app.js"></script>
 </body>
 </html>
+
+<!-- ======================= public/app.js ======================= -->
+<script>
+const freeBtn = document.getElementById('freeBtn');
+const fullBtn = document.getElementById('fullBtn');
+const vipBtn = document.getElementById('vipBtn');
+const moodEl = document.getElementById('mood');
+const sessionTypeEl = document.getElementById('sessionType');
+const userTextEl = document.getElementById('userText');
+const playBtn = document.getElementById('playBtn');
+const chatEl = document.getElementById('chat');
+const audioContainer = document.getElementById('audioContainer');
+
+// === Modo desarrollador solo para ti ===
+const isDevUser = window.location.href.includes('dev=true');
+let testAccessActive = false;
+if (isDevUser) {
+  testAccessActive = true;
+  logChat('Sistema', 'Modo desarrollador activo: acceso completo por 5 minutos.');
+  setTimeout(() => {
+    testAccessActive = false;
+    logChat('Sistema', 'Modo desarrollador expirado.');
+  }, 5 * 60 * 1000);
+}
+
+// === Audio map ===
+const audioMap = {
+  mood: { love:'/audio/mood_love.mp3', calm:'/audio/mood_calm.mp3', success:'/audio/mood_success.mp3', sad:'/audio/mood_sad.mp3', neutral:'/audio/mood_neutral.mp3' },
+  vip: { love:'/audio/vip_love.mp3', calm:'/audio/vip_calm.mp3', success:'/audio/vip_success.mp3', sad:'/audio/vip_sad.mp3', neutral:'/audio/vip_neutral.mp3' }
+};
+
+function logChat(sender, text){
+  const p = document.createElement('div');
+  p.innerHTML = `<strong>${sender}:</strong> ${text}`;
+  chatEl.appendChild(p);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function playMoodAudio(mood, type='mood'){
+  const src = audioMap[type][mood];
+  if (!src) return;
+  const audio = new Audio(src);
+  audio.volume = 0.7;
+  audio.play();
+  return audio;
+}
+
+// === Sesión gratuita ===
+freeBtn.onclick = () => {
+  const mood = moodEl.value;
+  const type = sessionTypeEl.value;
+  logChat('Sistema', `Iniciando sesión gratuita para estado ${mood} y sesión ${type}`);
+  const audio = playMoodAudio(mood, testAccessActive ? 'vip' : 'mood');
+  setTimeout(() => {
+    if(audio) audio.pause();
+    logChat('Sistema', testAccessActive ? 'Sesión de desarrollo finalizada (5min).' : 'Sesión gratuita finalizada (8s).');
+  }, testAccessActive ? 5*60*1000 : 8000);
+};
+
+// === Sesión completa Stripe ===
+fullBtn.onclick = async () => {
+  const mood = moodEl.value;
+  const type = sessionTypeEl.value;
+  let amount = 0;
+  switch(type){
+    case 'private': amount=500000; break;
+    case 'personalized': amount=25000; break;
+    case 'group': amount=100000; break;
+    case 'corporate': amount=50000; break;
+    case 'hospital': amount=40000; break;
+    default: amount=2000;
+  }
+  try{
+    const res = await fetch('/create-checkout-session',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ amount, description:`Sesión completa ${mood}`, metadata:{actionType:'full_session', mood, sessionType:type} })
+    });
+    const data = await res.json();
+    if(data.url) window.location.href = data.url;
+    else logChat('Error','No se pudo iniciar pago');
+  }catch(err){
+    logChat('Error',err.message);
+  }
+};
+
+// === Sesión VIP Stripe ===
+vipBtn.onclick = async () => {
+  const type = sessionTypeEl.value;
+  try{
+    const res = await fetch('/create-vip-checkout',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({step:'initial', sessionType:type})
+    });
+    const data = await res.json();
+    if(data.url) window.location.href = data.url;
+    else logChat('Error','No se pudo iniciar VIP');
+  }catch(err){
+    logChat('Error',err.message);
+  }
+};
+
+// === Chat IA ===
+async function sendAIMessage(){
+  const text = userTextEl.value.trim();
+  if(!text) return alert('Escribe algo primero');
+  logChat('Usuario', text);
+  const mood = moodEl.value;
+  const type = testAccessActive ? 'vip' : 'mood';
+  playMoodAudio(mood,type);
+  try{
+    const res = await fetch('/ai-response',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({prompt:text, voice:'Miguel'})
+    });
+    const data = await res.json();
+    if(data.audio_url){
+      audioContainer.innerHTML = `<audio controls autoplay src="${data.audio_url}"></audio>`;
+      logChat('Sistema', 'Respuesta de IA generada y reproducida.');
+    }else{
+      logChat('Sistema','Error generando audio de IA');
+    }
+  }catch(err){
+    logChat('Error',err.message);
+  }
+}
+playBtn.addEventListener('click', sendAIMessage);
+</script>
