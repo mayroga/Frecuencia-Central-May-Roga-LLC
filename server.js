@@ -1,38 +1,46 @@
+// server.js
 import express from "express";
-import path from "path";
 import Stripe from "stripe";
-import { fileURLToPath } from 'url';
+import path from "path";
+import { fileURLToPath } from "url";
 import bodyParser from "body-parser";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, "public")));
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-app.use(express.static(path.join(__dirname, "public")));
-app.use(bodyParser.json());
-
-// Endpoints de Stripe
-app.post("/create-payment-intent", async (req, res) => {
-    const { amount, currency } = req.body;
-    try {
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount,
-            currency,
-            automatic_payment_methods: { enabled: true },
-        });
-        res.send({ clientSecret: paymentIntent.client_secret });
-    } catch (error) {
-        res.status(500).send({ error: error.message });
-    }
+app.post("/create-checkout-session", async (req, res) => {
+  const { priceId } = req.body;
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      payment_method_types: ["card"],
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${req.headers.origin}/?success=true`,
+      cancel_url: `${req.headers.origin}/?canceled=true`,
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Servir index.html
-app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "index.html"));
+app.get("/audio/:category", (req, res) => {
+  const { category } = req.params;
+  const filePath = path.join(__dirname, "audios", `${category}.mp3`);
+  res.sendFile(filePath);
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.get("/vibration/:category", (req, res) => {
+  const { category } = req.params;
+  const filePath = path.join(__dirname, "audios", `${category}_vibe.json`);
+  res.sendFile(filePath);
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Servidor activo en puerto ${PORT}`));
