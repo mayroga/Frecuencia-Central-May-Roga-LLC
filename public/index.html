@@ -7,28 +7,17 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="container">
-  <h1>Frecuencia Central</h1>
-  <p>Dime cómo te sientes o qué deseas… y déjame ayudarte a equilibrar tu energía.</p>
+  <div class="container">
+    <h1>Frecuencia Central</h1>
+    <p>Dime cómo te sientes o qué deseas… y déjame ayudarte a equilibrar tu energía.</p>
 
-  <div class="quick-buttons">
-    <button data-emotion="miedo">Me siento asustado</button>
-    <button data-emotion="dinero">Tengo poco dinero</button>
-    <button data-emotion="energia">Estoy aburrido</button>
-    <button data-emotion="duelo">Perdí a alguien</button>
-    <button data-emotion="dinero">Quiero ascender</button>
-    <button data-emotion="seguridad">Necesito seguridad</button>
-    <button data-emotion="sueño">Quiero dormir</button>
-    <button data-emotion="amor">Quiero amor</button>
+    <textarea id="userInput" placeholder="Escribe tu emoción o deseo"></textarea>
+    <button id="startBtn">Empezar sesión</button>
+
+    <div id="response"></div>
+    <audio id="musicPlayer" controls></audio>
   </div>
 
-  <textarea id="userText" rows="4" placeholder="Dilo con tus palabras"></textarea>
-  <button id="startBtn">Empezar</button>
-
-  <div id="audioContainer"></div>
-  <div id="chat"></div>
-</div>
-
-<script src="app.js"></script>
+  <script src="main.js"></script>
 </body>
 </html>
