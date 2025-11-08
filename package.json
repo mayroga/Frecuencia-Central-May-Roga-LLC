@@ -1,42 +1,12 @@
-{
-  "name": "frecuencia-central",
-  "version": "1.0.0",
-  "description": "Plataforma de risoterapia y bienestar natural - Frecuencia Central - May Roga LLC",
-  "main": "server.js",
-  "type": "module",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "stripe": "^12.16.0",
-    "body-parser": "^1.20.2",
-    "cors": "^2.8.5",
-    "axios": "^1.7.2",
-    "dotenv": "^16.3.1",
-    "node-fetch": "^3.3.2",
-    "fs-extra": "^11.1.1",
-    "openai": "^4.28.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "keywords": [
-    "frecuencia",
-    "risoterapia",
-    "bienestar",
-    "vibraciones",
-    "musica",
-    "IA",
-    "OpenAI",
-    "Stripe",
-    "VIP",
-    "sesiones"
-  ],
-  "author": "Maykel Rodriguez Garcia",
-  "license": "MIT"
+"dependencies": {
+  "express": "^4.18.2",
+  "stripe": "^12.16.0",
+  "body-parser": "^1.20.2",
+  "cors": "^2.8.5",
+  "axios": "^1.7.2",
+  "dotenv": "^16.3.1",
+  "node-fetch": "^3.3.2",
+  "fs-extra": "^11.1.1",
+  "openai": "^4.28.0",
+  "jsonwebtoken": "^9.0.0"
 }
