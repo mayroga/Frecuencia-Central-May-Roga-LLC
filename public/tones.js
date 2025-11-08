@@ -1,4 +1,3 @@
-// Genera tono con Tone.js o usa pistas pregrabadas si existen
 function playTone(freq = 432, volume = 0.5) {
   try {
     const sampleMap = {
