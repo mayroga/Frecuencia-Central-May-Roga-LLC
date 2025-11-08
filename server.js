@@ -7,7 +7,7 @@ import Stripe from 'stripe';
 import fetch from 'node-fetch';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
-import { Configuration, OpenAIApi } from 'openai';
+import OpenAI from 'openai';
 
 dotenv.config();
 
@@ -63,9 +63,9 @@ app.post('/create-checkout-session', async (req, res) => {
 });
 
 // --- IA Musical/Vibracional (Gemini + OpenAI fallback) ---
-const openai = new OpenAIApi(new Configuration({
+const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-}));
+});
 
 async function generarRespuestaEmocional(prompt) {
     // Intentar Gemini
@@ -83,11 +83,11 @@ async function generarRespuestaEmocional(prompt) {
     } catch (err) {
         console.warn('Gemini fallo, usando OpenAI', err.message);
         // Fallback OpenAI
-        const completion = await openai.createChatCompletion({
+        const completion = await openai.chat.completions.create({
             model: 'gpt-4',
             messages: [{ role: 'user', content: prompt }],
         });
-        return completion.data.choices[0].message.content;
+        return completion.choices[0].message.content;
     }
 }
 
@@ -107,7 +107,7 @@ app.post('/session', async (req, res) => {
             tristeza: { sonido: 'lluvia tenue + cello', vibracion: [40,150,40] },
             energia: { sonido: 'aves matutinas + guitarra acústica', vibracion: [70,40,70,40,200] },
             amor: { sonido: 'lluvia fina + guitarra jazz + piano', vibracion: [120,60,120,120] },
-            // Añadir más categorías según mapa
+            // Añadir más categorías según mapa emocional
         };
         const config = patrones[category.toLowerCase()] || { sonido: 'pad neutro', vibracion: [20,20,20] };
 
