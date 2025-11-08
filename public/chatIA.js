@@ -1,66 +1,45 @@
-// Archivo: public/chatIA.js
-function ChatIA() {
-  const [input, setInput] = React.useState("");
-  const [messages, setMessages] = React.useState([]);
+// chatIA.js
+// Maneja la interacción dinámica durante la sesión
+const followUpBtn = document.getElementById('followUp');
+let sessionInterval = null;
 
-  const sendMessage = async () => {
-    if (!input.trim()) return;
-    const userMsg = { sender: "Tú", text: input };
-    setMessages((m) => [...m, userMsg]);
+// Función para seguimiento durante sesión
+async function checkStatus(need){
+  const res = await fetch(`/map/${need}`);
+  const data = await res.json();
+  playAudio(data.sounds[0]);
+  logChat('Sistema', `Revisando tu estado emocional... adaptando sesión a ${need}`);
+}
 
-    try {
-      // Intentar Gemini primero
-      let res = await fetch("/ai-response", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: input, voice: "Miguel" }),
-      });
-      let data = await res.json();
+// Inicia seguimiento cada 5 minutos (o ajustable)
+function startSessionFollowUp(need){
+  if(sessionInterval) clearInterval(sessionInterval);
+  sessionInterval = setInterval(()=>checkStatus(need), 300000); // 5 min
+}
 
-      if(!data.audio_url){
-        // Backup: OpenAI
-        res = await fetch("/openai-response", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: input }),
-        });
-        data = await res.json();
-      }
+// Botón seguimiento manual
+if(followUpBtn){
+  followUpBtn.onclick=()=>{
+    const need = document.getElementById('mood').value;
+    checkStatus(need);
+  }
+}
 
-      if(data.audio_url){
-        const a = new Audio(data.audio_url);
-        a.play();
-        setMessages((m) => [
-          ...m,
-          { sender: "IA", text: "🎵 Respuesta generada con frecuencia terapéutica." },
-        ]);
-      } else {
-        setMessages((m) => [...m, { sender: "IA", text: "Error generando respuesta." }]);
-      }
-    } catch(err){
-      setMessages((m) => [...m, { sender: "Error", text: err.message }]);
-    }
+// Función para adaptar vibraciones si dispositivo soporta
+export function vibratePattern(pattern){
+  if(navigator.vibrate) navigator.vibrate(pattern);
+}
 
-    setInput("");
+// Ejemplo: activar micro-pulsos según necesidad
+export function adaptVibration(need){
+  const patterns = {
+    miedo:[20,220,20],
+    dinero:[60,40,60,40,200],
+    energia:[70,40,70,40,200],
+    amor:[120,60,120,120],
+    duelo:[40,150,40],
+    sueño:[10,50,10],
+    seguridad:[100,80,100]
   };
-
-  return (
-    <div className="chat-box">
-      <h3>Consulta Personalizada IA</h3>
-      <div className="chat">
-        {messages.map((m, i) => (
-          <div key={i}>
-            <strong>{m.sender}:</strong> {m.text}
-          </div>
-        ))}
-      </div>
-      <input
-        type="text"
-        placeholder="Escribe tu pregunta..."
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-      />
-      <button onClick={sendMessage}>Enviar</button>
-    </div>
-  );
+  vibratePattern(patterns[need] || [30,30,30]);
 }
