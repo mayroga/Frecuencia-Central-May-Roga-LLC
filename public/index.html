@@ -1,75 +1,49 @@
+<!-- public/index.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Frecuencia Central – Human Resonance Experience</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frecuencia Central</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<style>
-@keyframes flow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-.dynamic-bg{background:linear-gradient(-45deg,#1f2937,#0f172a,#1e3a8a,#0c4a6e);background-size:400% 400%;animation:flow 20s ease infinite;min-height:100vh;}
-.card{backdrop-filter:blur(12px);background-color:rgba(30,41,59,0.7);border:1px solid rgba(100,116,139,0.3);}
-.ai-text{white-space:pre-wrap;}
-</style>
 </head>
-<body class="dynamic-bg text-white font-sans flex items-center justify-center p-4">
-<main class="w-full max-w-2xl mx-auto py-12">
-<div id="app-container" class="card p-6 md:p-10 rounded-xl shadow-2xl transition-all duration-500">
-<header class="text-center mb-8">
-<h1 class="text-4xl font-extrabold text-blue-300">Frecuencia Central</h1>
-<p class="mt-2 text-xl font-light text-gray-300">Human Resonance Experience</p>
-</header>
-<div id="initial-view">
-<p class="text-center text-lg mb-6 text-gray-200">"Dime cómo te sientes o qué deseas… y déjame ayudarte a equilibrar tu energía."</p>
-<div class="grid grid-cols-2 gap-3 mb-6">
-<button onclick="handleQuickSelect('Miedo')" class="quick-btn bg-red-800/60 hover:bg-red-700/80 p-3 rounded-lg text-sm font-semibold transition">Si estás asustado</button>
-<button onclick="handleQuickSelect('Dinero')" class="quick-btn bg-green-800/60 hover:bg-green-700/80 p-3 rounded-lg text-sm font-semibold transition">Quiero atraer dinero / ascender</button>
-<button onclick="handleQuickSelect('Duelo')" class="quick-btn bg-gray-600/60 hover:bg-gray-500/80 p-3 rounded-lg text-sm font-semibold transition">Triste por una pérdida</button>
-<button onclick="handleQuickSelect('Sueño')" class="quick-btn bg-indigo-800/60 hover:bg-indigo-700/80 p-3 rounded-lg text-sm font-semibold transition">Quiero dormir mejor</button>
-</div>
-<textarea id="emotion-input" class="w-full h-24 p-4 rounded-lg bg-gray-800/70 text-gray-100 placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500" placeholder="Escribe libremente aquí..."></textarea>
-<div class="flex justify-center mt-4 space-x-4">
-<button onclick="handleInput()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition duration-300 shadow-lg">💬 Empezar</button>
-<button onclick="showPaymentModal()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-xl transition duration-300 shadow-lg">💳 Sesiones Premium</button>
-</div>
-</div>
-<div id="response-view" class="hidden">
-<p class="text-blue-300 font-semibold mb-3">Respuesta de la IA</p>
-<div id="ai-response-text" class="ai-text p-4 bg-gray-800/70 rounded-lg text-lg mb-6 leading-relaxed"></div>
-<p id="disclaimer" class="text-sm text-yellow-400 mb-6">⚠️ Nota: Frecuencia Central es una herramienta de bienestar emocional y no sustituye consejo médico/psicológico.</p>
-<div class="space-y-3">
-<button onclick="startSession('free')" class="w-full bg-green-500 hover:bg-green-600 text-gray-900 font-bold py-3 rounded-xl transition duration-300">🎧 Probar 8 Segundos Gratis</button>
-<button onclick="startSession('paid')" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition duration-300">✨ Iniciar Sesión Completa</button>
-<button onclick="resetApp()" class="w-full bg-transparent border border-gray-500 hover:border-gray-400 text-gray-300 font-bold py-2 rounded-xl transition duration-300 text-sm mt-2">← Volver al inicio</button>
-</div>
-</div>
-<div id="session-view" class="hidden text-center">
-<h2 class="text-3xl font-bold text-teal-300 mb-4">✨ Sesión Activa ✨</h2>
-<div id="session-details" class="p-4 bg-gray-800/70 rounded-lg mb-6">
-<p class="text-lg font-medium text-gray-200" id="current-category">Categoría: Calma</p>
-<p class="text-sm text-gray-400" id="current-sound">Sonido: Pad Cálido y Binaurales (4-7 Hz)</p>
-<p class="text-sm text-gray-400" id="current-vibration">Vibración: Pulso Largo y Suave</p>
-<p id="timer" class="text-2xl font-mono mt-3 text-yellow-300">00:00</p>
-</div>
-<p id="session-guide" class="ai-text p-4 bg-gray-900/80 rounded-lg mb-6 text-sm text-gray-300 leading-relaxed">— La IA te está acompañando y adaptando la sesión en tiempo real. —</p>
-<div class="flex space-x-4 justify-center">
-<button onclick="stopSession('user_interruption')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-xl transition duration-300 shadow-lg">🛑 Terminar Sesión</button>
-<button onclick="simulateAIInteraction()" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-6 rounded-xl transition duration-300 shadow-lg">💬 Preguntar a la IA</button>
-</div>
-<p id="audio-state" class="mt-4 text-sm text-gray-400">Audio: Inactivo. Haz clic para iniciar el motor de audio.</p>
-</div>
-<div id="payment-modal" class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-<div class="card p-8 rounded-xl w-full max-w-md">
-<h3 class="text-2xl font-bold mb-4 text-blue-300">💳 Opciones de Sesión Premium</h3>
-<p class="text-sm text-gray-400 mb-6">Máximo 1 sesión al día por tarjeta. La segunda sesión del día cuesta el doble.</p>
-<div id="payment-tiers" class="space-y-4">
-<div class="p-4 bg-gray-800/80 rounded-lg flex justify-between items-center"><div><p class="font-semibold text-lg text-teal-400">🎵 Básico</p><p class="text-xs text-gray-400">Acceso a sonidos genéricos. 10-15 min.</p></div><span class="text-xl font-bold">$20</span></div>
-<div class="p-4 bg-gray-800/80 rounded-lg flex justify-between items-center"><div><p class="font-semibold text-lg text-teal-400">🌈 Premium Individual</p><p class="text-xs text-gray-400">Personalización total y guía emocional. Hasta 20 min.</p></div><span class="text-xl font-bold">$50 - $250</span></div>
-</div>
-<button onclick="hidePaymentModal()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition duration-300 mt-6">Cerrar</button>
-</div>
-</div>
-</div>
+<body class="bg-gray-900 text-white font-sans flex flex-col items-center justify-center min-h-screen p-4">
+<main class="w-full max-w-2xl">
+  <div id="initial-view">
+    <h1 class="text-4xl font-bold text-blue-300 mb-4">Frecuencia Central</h1>
+    <p class="mb-4">Selecciona lo que deseas equilibrar:</p>
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <button onclick="startSession('Miedo')" class="bg-red-700 p-3 rounded">Miedo</button>
+      <button onclick="startSession('Dinero')" class="bg-green-700 p-3 rounded">Dinero</button>
+      <button onclick="startSession('Duelo')" class="bg-gray-700 p-3 rounded">Duelo</button>
+      <button onclick="startSession('Sueño')" class="bg-indigo-700 p-3 rounded">Sueño</button>
+    </div>
+    <button id="premium-btn" class="bg-purple-600 p-3 rounded mt-2">Sesión Premium</button>
+  </div>
+
+  <div id="response-view" class="hidden"></div>
+
+  <div id="session-view" class="hidden text-center">
+    <h2 class="text-3xl font-bold text-teal-300 mb-2">Sesión Activa</h2>
+    <p id="current-category" class="mb-2"></p>
+    <p id="current-sound" class="mb-2"></p>
+    <p id="current-vibration" class="mb-2"></p>
+    <p id="timer" class="text-2xl font-mono mt-2 text-yellow-300">00:00</p>
+    <button onclick="stopSession()" class="bg-red-600 p-3 rounded mt-4">Terminar Sesión</button>
+  </div>
 </main>
+
 <script type="module" src="./apps.js"></script>
+<script>
+document.getElementById("premium-btn").addEventListener("click", async () => {
+  const res = await fetch("/create-checkout-session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ priceId: "price_XXXXXXXXXXXXX" }),
+  });
+  const data = await res.json();
+  window.location = data.url;
+});
+</script>
 </body>
 </html>
