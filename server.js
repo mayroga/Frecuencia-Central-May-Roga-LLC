@@ -1,133 +1,150 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import Stripe from "stripe";
-import jwt from "jsonwebtoken";
-import OpenAI from "openai";
+// server.js
+import express from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import Stripe from 'stripe';
+import fs from 'fs-extra';
+import fetch from 'node-fetch';
+import jwt from 'jsonwebtoken';
 
 dotenv.config();
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+const PORT = process.env.PORT || 3000;
 
-// Stripe y OpenAI
+// Stripe setup
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Configuración de sesiones
+// Middlewares
+app.use(cors());
+app.use(bodyParser.json());
+app.use(express.static('public'));
+
+// Configuración de sesiones activas y tokens
+let activeSessions = []; // máximo 10 simultáneas
 const MAX_SESSIONS = 10;
-let activeSessions = 0;
 
-// Tokens JWT
-const generateToken = (payload) => jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "25m" });
-const verifyToken = (token) => {
-  try { return jwt.verify(token, process.env.JWT_SECRET); }
-  catch { return null; }
+// Mapa de sonidos y vibraciones según necesidad
+const audioMap = {
+  miedo: { sounds: ['/audio/miedo1.mp3'], vibration: [20,220,20] },
+  dinero: { sounds: ['/audio/dinero1.mp3'], vibration: [60,40,60,40,200] },
+  energia: { sounds: ['/audio/energia1.mp3'], vibration: [70,40,70,40,200] },
+  amor: { sounds: ['/audio/amor1.mp3'], vibration: [120,60,120,120] },
+  duelo: { sounds: ['/audio/duelo1.mp3'], vibration: [40,150,40] },
+  sueño: { sounds: ['/audio/sueno1.mp3'], vibration: [10,50,10] },
+  seguridad: { sounds: ['/audio/seguridad1.mp3'], vibration: [100,80,100] },
+  // agregar más según mapa que enviaste
 };
 
-// Limite de sesiones simultaneas
-const sessionLimiter = (req, res, next) => {
-  if(activeSessions >= MAX_SESSIONS) return res.status(429).json({ error: "Máximo de sesiones activas alcanzado" });
-  activeSessions++;
-  res.on("finish", () => { activeSessions--; });
-  next();
-};
+// Función para generar token temporal
+function generateToken(sessionId) {
+  return jwt.sign({ sessionId }, process.env.JWT_SECRET, { expiresIn: '30m' });
+}
 
-// Mapa de emociones a sonidos, instrumentos y vibraciones
-const emotionProfiles = {
-  miedo: { naturaleza: ["lluvia suave","mar lejano","latido lento"], instrumentos:["pad cálido","cello grave","flauta baja"], bpm:[40,60], binaural:"4-7Hz", vibration:[20,220,20] },
-  tristeza: { naturaleza:["lluvia tenue","hojas cayendo"], instrumentos:["cello","piano lento","coros etéreos"], bpm:[30,50], binaural:"3-5Hz", vibration:[40,150,40] },
-  soledad: { naturaleza:["brisa nocturna"], instrumentos:["pad etéreo","guitarra suave"], bpm:[35,55], binaural:"3-5Hz", vibration:[30,100,30] },
-  alegria: { naturaleza:["cantos de aves","río"], instrumentos:["guitarra rítmica","percusión ligera","synth alegre"], bpm:[100,130], binaural:"10Hz", vibration:[70,40,70,40,200] },
-  motivacion: { naturaleza:["viento en pinos"], instrumentos:["piano arpegios","cuerdas ascendentes"], bpm:[60,80], binaural:"6-9Hz", vibration:[70,40,70,40,200] },
-  amor: { naturaleza:["lluvia fina","coros etéreos"], instrumentos:["guitarra jazz","sax suave","piano mayor/7"], bpm:[60,70], binaural:"6Hz", vibration:[120,60,120,120] },
-  dinero: { naturaleza:["ambiente urbano suave","campanas distantes"], instrumentos:["piano bajo marcado","cuerdas tensas con resolución positiva"], bpm:[90,110], binaural:"6-9Hz", vibration:[70,40,70,40,200] },
-  exito: { naturaleza:["café lejano","suave ambiente estudio"], instrumentos:["pads claros","piano tempo medio","arpegios binaurales 10Hz"], bpm:[80,100], binaural:"10Hz", vibration:[100,80,100] },
-  seguridad: { naturaleza:["fuego hogar suave"], instrumentos:["cuerdas ostinato grave"], bpm:[50,60], binaural:"4-6Hz", vibration:[100,80,100] },
-  sueño: { naturaleza:["olas suaves","grillos nocturnos","viento en hojas"], instrumentos:["pads largos","arpegios lentos"], bpm:[30,50], binaural:"1-4Hz", vibration:[20,220,20] },
-  deseo: { naturaleza:["ambiente natural sutil"], instrumentos:["piano suave","cuerdas etéreas"], bpm:[60,80], binaural:"6Hz", vibration:[70,40,70,40,200] }
-};
+// Función para validar acceso y límites
+function canStartSession(sessionId) {
+  return activeSessions.length < MAX_SESSIONS && !activeSessions.includes(sessionId);
+}
 
-// Detectar emoción (IA)
-const detectEmotion = async (text) => {
-  const response = await openai.chat.completions.create({
-    model:"gpt-5-mini",
-    messages:[
-      { role:"system", content:"Detecta emoción y necesidad: miedo, tristeza, soledad, alegría, motivacion, amor, dinero, exito, seguridad, sueño, deseo" },
-      { role:"user", content:text }
-    ]
-  });
-  return response.choices[0].message.content.toLowerCase();
-};
-
-// Generar respuesta empática IA
-const generateAIResponse = async (text, emotion, lang="es") => {
-  const prompt = `
-Usuario: "${text}"
-Emoción detectada: "${emotion}"
-Responde con empatía, guía emocional y explica música, sonidos naturales y vibración. 
-Duración sugerida: 8-20 min. Responde en ${lang}.
-`;
-  const response = await openai.chat.completions.create({
-    model:"gpt-5-mini",
-    messages:[{role:"user", content:prompt}]
-  });
-  return response.choices[0].message.content;
-};
-
-// Detección de idioma simple
-const detectLanguage = (text) => {
-  // Aquí se podría integrar librería Intl o Google API; fallback simplificado:
-  if(/[áéíóúñ]/i.test(text)) return "es";
-  if(/[a-zA-Z]/i.test(text)) return "en";
-  return "es";
-};
-
-// Stripe - crear sesión de pago
-app.post("/api/payment", async (req,res)=>{
-  try {
-    const { category, amount } = req.body;
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types:["card"],
-      line_items:[{
-        price_data:{ currency:"usd", product_data:{ name:`Frecuencia Central - ${category}` }, unit_amount: amount*100 },
-        quantity:1
-      }],
-      mode:"payment",
-      success_url:`${req.headers.origin}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:`${req.headers.origin}/?canceled=true`
-    });
-    const token = generateToken({ sessionId:session.id, category });
-    res.json({ url:session.url, token });
-  } catch(e){ console.error(e); res.status(500).json({error:"Error creando sesión Stripe"});}
+// Endpoint: crear sesión gratuita
+app.post('/free-session', (req, res) => {
+  const { userToken } = req.body;
+  if (!canStartSession(userToken)) {
+    return res.status(429).json({ error: 'Máximo de sesiones activas alcanzado' });
+  }
+  activeSessions.push(userToken);
+  setTimeout(() => {
+    activeSessions = activeSessions.filter(s => s !== userToken);
+  }, 8000); // 8 segundos de sesión gratuita
+  const token = generateToken(userToken);
+  res.json({ token, duration: 8, message: 'Sesión gratuita iniciada' });
 });
 
-// Iniciar sesión emocional
-app.post("/api/session/start", sessionLimiter, async (req,res)=>{
-  const { userInput, token, freeTrial=false } = req.body;
-  const access = verifyToken(token);
-  if(!access) return res.status(403).json({ error:"Acceso no autorizado o expirado" });
-
+// Endpoint: crear sesión de pago
+app.post('/create-checkout-session', async (req, res) => {
   try {
-    const lang = detectLanguage(userInput);
-    const emotion = await detectEmotion(userInput);
-    const profile = emotionProfiles[emotion] || emotionProfiles["motivacion"];
-    const aiMessage = await generateAIResponse(userInput, emotion, lang);
-
-    // Ajustes de duración
-    let duration = freeTrial ? 8 : 20*60; // 8 segundos gratis o hasta 20 min en segundos
-
-    res.json({ emotion, profile, aiMessage, duration });
-  } catch(e){
-    console.error(e);
-    res.status(500).json({ error:"Error iniciando sesión emocional" });
+    const { amount, description, metadata } = req.body;
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          product_data: { name: description },
+          unit_amount: amount,
+        },
+        quantity: 1,
+      }],
+      mode: 'payment',
+      success_url: `${req.headers.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${req.headers.origin}/cancel`,
+      metadata,
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Ruta principal
-app.get("/", (req,res)=>res.send("Frecuencia Central – Human Resonance Experience Running"));
+// Endpoint: IA emocional / respuesta
+app.post('/ai-response', async (req, res) => {
+  try {
+    const { prompt, voice } = req.body;
+    // Lógica: Gemini + OpenAI fallback
+    let aiResponse = '';
+    try {
+      // Aquí llamas a Gemini si disponible
+      const geminiResp = await fetch('https://api.gemini.ai/respond', {
+        method:'POST',
+        headers: {'Content-Type':'application/json', 'Authorization': `Bearer ${process.env.GEMINI_KEY}`},
+        body: JSON.stringify({ prompt, voice })
+      });
+      const geminiData = await geminiResp.json();
+      aiResponse = geminiData.text || '';
+    } catch {
+      // fallback OpenAI
+      const openaiResp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${process.env.OPENAI_API_KEY}`},
+        body: JSON.stringify({
+          model: "gpt-4",
+          messages:[{role:"user", content:prompt}]
+        })
+      });
+      const openaiData = await openaiResp.json();
+      aiResponse = openaiData.choices[0].message.content;
+    }
 
-// Configuración de puerto
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, ()=>console.log(`Server escuchando en puerto ${PORT}`));
+    // Simular URL de audio (para reproducción)
+    const audioUrl = `/audio/generated_${Date.now()}.mp3`;
+
+    // Guardar audio dummy (en producción aquí iría TTS real)
+    await fs.writeFile(`./public${audioUrl}`, ''); // placeholder
+
+    res.json({ text: aiResponse, audio_url: audioUrl });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint: obtener mapa de audio/vibraciones según necesidad
+app.get('/map/:need', (req, res) => {
+  const { need } = req.params;
+  const data = audioMap[need.toLowerCase()];
+  if (!data) return res.status(404).json({ error: 'Necesidad no encontrada' });
+  res.json(data);
+});
+
+// Endpoint: token validación sesión premium
+app.post('/validate-session', (req, res) => {
+  const { token } = req.body;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    res.json({ valid: true, sessionId: decoded.sessionId });
+  } catch {
+    res.json({ valid: false });
+  }
+});
+
+// Iniciar servidor
+app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
