@@ -1,150 +1,196 @@
-// server.js
+// ======================= server.js =======================
 import express from 'express';
-import dotenv from 'dotenv';
-import cors from 'cors';
 import bodyParser from 'body-parser';
+import cors from 'cors';
 import Stripe from 'stripe';
-import fs from 'fs-extra';
-import fetch from 'node-fetch';
 import jwt from 'jsonwebtoken';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
-// Stripe setup
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// --- CLAVES EN RENDER (nunca .env) ---
+const STRIPE_SECRET_KEY = 'tu_stripe_secret_key_aqui';
+const JWT_SECRET = 'clave_jwt_para_tokens_temporales';
 
-// Middlewares
+const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-08-16' });
+
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Configuración de sesiones activas y tokens
-let activeSessions = []; // máximo 10 simultáneas
-const MAX_SESSIONS = 10;
-
-// Mapa de sonidos y vibraciones según necesidad
-const audioMap = {
-  miedo: { sounds: ['/audio/miedo1.mp3'], vibration: [20,220,20] },
-  dinero: { sounds: ['/audio/dinero1.mp3'], vibration: [60,40,60,40,200] },
-  energia: { sounds: ['/audio/energia1.mp3'], vibration: [70,40,70,40,200] },
-  amor: { sounds: ['/audio/amor1.mp3'], vibration: [120,60,120,120] },
-  duelo: { sounds: ['/audio/duelo1.mp3'], vibration: [40,150,40] },
-  sueño: { sounds: ['/audio/sueno1.mp3'], vibration: [10,50,10] },
-  seguridad: { sounds: ['/audio/seguridad1.mp3'], vibration: [100,80,100] },
-  // agregar más según mapa que enviaste
-};
-
-// Función para generar token temporal
-function generateToken(sessionId) {
-  return jwt.sign({ sessionId }, process.env.JWT_SECRET, { expiresIn: '30m' });
+// ===== Generar token temporal para sesiones premium =====
+function generateToken(data, expiresIn = '20m') {
+  if (!JWT_SECRET) throw new Error('secretOrPrivateKey must have a value');
+  return jwt.sign(data, JWT_SECRET, { expiresIn });
 }
 
-// Función para validar acceso y límites
-function canStartSession(sessionId) {
-  return activeSessions.length < MAX_SESSIONS && !activeSessions.includes(sessionId);
-}
-
-// Endpoint: crear sesión gratuita
-app.post('/free-session', (req, res) => {
-  const { userToken } = req.body;
-  if (!canStartSession(userToken)) {
-    return res.status(429).json({ error: 'Máximo de sesiones activas alcanzado' });
-  }
-  activeSessions.push(userToken);
-  setTimeout(() => {
-    activeSessions = activeSessions.filter(s => s !== userToken);
-  }, 8000); // 8 segundos de sesión gratuita
-  const token = generateToken(userToken);
-  res.json({ token, duration: 8, message: 'Sesión gratuita iniciada' });
-});
-
-// Endpoint: crear sesión de pago
+// ===== Stripe Checkout =====
 app.post('/create-checkout-session', async (req, res) => {
+  const { amount, description, metadata } = req.body;
   try {
-    const { amount, description, metadata } = req.body;
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: [{
-        price_data: {
-          currency: 'usd',
-          product_data: { name: description },
-          unit_amount: amount,
-        },
-        quantity: 1,
-      }],
+      line_items: [{ price_data: { currency: 'usd', product_data: { name: description }, unit_amount: amount }, quantity: 1 }],
       mode: 'payment',
-      success_url: `${req.headers.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.origin}/cancel`,
-      metadata,
+      success_url: `${req.headers.origin}/?session=success`,
+      cancel_url: `${req.headers.origin}/?session=cancel`,
+      metadata
     });
     res.json({ url: session.url });
-  } catch (err) {
+  } catch(err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Endpoint: IA emocional / respuesta
+// ===== AI Response (Gemini/OpenAI placeholder) =====
 app.post('/ai-response', async (req, res) => {
-  try {
-    const { prompt, voice } = req.body;
-    // Lógica: Gemini + OpenAI fallback
-    let aiResponse = '';
-    try {
-      // Aquí llamas a Gemini si disponible
-      const geminiResp = await fetch('https://api.gemini.ai/respond', {
-        method:'POST',
-        headers: {'Content-Type':'application/json', 'Authorization': `Bearer ${process.env.GEMINI_KEY}`},
-        body: JSON.stringify({ prompt, voice })
-      });
-      const geminiData = await geminiResp.json();
-      aiResponse = geminiData.text || '';
-    } catch {
-      // fallback OpenAI
-      const openaiResp = await fetch('https://api.openai.com/v1/chat/completions', {
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':`Bearer ${process.env.OPENAI_API_KEY}`},
-        body: JSON.stringify({
-          model: "gpt-4",
-          messages:[{role:"user", content:prompt}]
-        })
-      });
-      const openaiData = await openaiResp.json();
-      aiResponse = openaiData.choices[0].message.content;
-    }
-
-    // Simular URL de audio (para reproducción)
-    const audioUrl = `/audio/generated_${Date.now()}.mp3`;
-
-    // Guardar audio dummy (en producción aquí iría TTS real)
-    await fs.writeFile(`./public${audioUrl}`, ''); // placeholder
-
-    res.json({ text: aiResponse, audio_url: audioUrl });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { prompt, voice } = req.body;
+  // Aquí integrarías Gemini/OpenAI real
+  // Respuesta simulada:
+  res.json({ audio_url: `/audio/mood_success.mp3`, message: `IA responde: ${prompt}` });
 });
 
-// Endpoint: obtener mapa de audio/vibraciones según necesidad
-app.get('/map/:need', (req, res) => {
-  const { need } = req.params;
-  const data = audioMap[need.toLowerCase()];
-  if (!data) return res.status(404).json({ error: 'Necesidad no encontrada' });
-  res.json(data);
+// ===== HTML catch-all =====
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
-// Endpoint: token validación sesión premium
-app.post('/validate-session', (req, res) => {
-  const { token } = req.body;
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    res.json({ valid: true, sessionId: decoded.sessionId });
-  } catch {
-    res.json({ valid: false });
-  }
-});
-
-// Iniciar servidor
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+
+
+// ======================= public/app.js =======================
+const freeBtn = document.getElementById('freeBtn');
+const fullBtn = document.getElementById('fullBtn');
+const vipBtn = document.getElementById('vipBtn');
+const moodEl = document.getElementById('mood');
+const intensityEl = document.getElementById('intensity');
+const sessionTypeEl = document.getElementById('sessionType');
+const userTextEl = document.getElementById('userText');
+const playBtn = document.getElementById('playBtn');
+const audioContainer = document.getElementById('audioContainer');
+const chatEl = document.getElementById('chat');
+
+// === Modo desarrollador solo para ti ===
+const isDevUser = window.location.href.includes('dev=true');
+let testAccessActive = false;
+
+if (isDevUser) {
+  testAccessActive = true;
+  logChat('Sistema', 'Modo desarrollador activo: acceso completo por 5 minutos.');
+  setTimeout(() => {
+    testAccessActive = false;
+    logChat('Sistema', 'Modo desarrollador expirado.');
+  }, 5 * 60 * 1000);
+}
+
+// === Audio map ===
+const audioMap = {
+  mood: { love:'/audio/mood_love.mp3', calm:'/audio/mood_calm.mp3', success:'/audio/mood_success.mp3', sad:'/audio/mood_sad.mp3', neutral:'/audio/mood_neutral.mp3' },
+  vip: { love:'/audio/vip_love.mp3', calm:'/audio/vip_calm.mp3', success:'/audio/vip_success.mp3', sad:'/audio/vip_sad.mp3', neutral:'/audio/vip_neutral.mp3' }
+};
+
+function logChat(sender, text){
+  const p = document.createElement('div');
+  p.innerHTML = `<strong>${sender}:</strong> ${text}`;
+  chatEl.appendChild(p);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function playMoodAudio(mood, type='mood'){
+  const src = audioMap[type][mood];
+  if (!src) return;
+  const audio = new Audio(src);
+  audio.volume = intensityEl.value / 100;
+  audio.play();
+  return audio;
+}
+
+// === Sesión gratuita 8s para usuarios normales, 5min para dev ===
+freeBtn.onclick = () => {
+  const mood = moodEl.value;
+  const type = sessionTypeEl.value;
+  logChat('Sistema', `Iniciando sesión gratuita para estado ${mood} y sesión ${type}`);
+  
+  const audio = playMoodAudio(mood, testAccessActive ? 'vip' : 'mood');
+  
+  setTimeout(() => {
+    if(audio) audio.pause();
+    logChat('Sistema', testAccessActive ? 'Sesión de desarrollo finalizada (5min).' : 'Sesión gratuita finalizada (8s).');
+  }, testAccessActive ? 5*60*1000 : 8000);
+};
+
+// === Sesión completa Stripe ===
+fullBtn.onclick = async () => {
+  const mood = moodEl.value;
+  const type = sessionTypeEl.value;
+  let amount = 0;
+  switch(type){
+    case 'private': amount=2000; break;
+    case 'personalized': amount=5000; break;
+    case 'group': amount=10000; break;
+    case 'corporate': amount=50000; break;
+    case 'hospital': amount=40000; break;
+    default: amount=2000;
+  }
+  try{
+    const res = await fetch('/create-checkout-session',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ amount, description:`Sesión completa ${mood}`, metadata:{actionType:'full_session', mood, voice:'Miguel', sessionType:type} })
+    });
+    const data = await res.json();
+    if(data.url) window.location.href = data.url;
+    else logChat('Error','No se pudo iniciar pago');
+  }catch(err){
+    logChat('Error',err.message);
+  }
+};
+
+// === Sesión VIP Stripe ===
+vipBtn.onclick = async () => {
+  const type = sessionTypeEl.value;
+  try{
+    const res = await fetch('/create-vip-checkout',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({step:'initial', sessionType:type})
+    });
+    const data = await res.json();
+    if(data.url) window.location.href = data.url;
+    else logChat('Error','No se pudo iniciar VIP');
+  }catch(err){
+    logChat('Error',err.message);
+  }
+};
+
+// === Chat IA ===
+async function sendAIMessage(){
+  const text = userTextEl.value.trim();
+  if(!text) return alert('Escribe algo primero');
+  logChat('Usuario', text);
+  const mood = moodEl.value;
+  const type = testAccessActive ? 'vip' : 'mood';
+  playMoodAudio(mood,type);
+  try{
+    const res = await fetch('/ai-response',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({prompt:text, voice:'Miguel'})
+    });
+    const data = await res.json();
+    if(data.audio_url){
+      audioContainer.innerHTML = `<audio controls autoplay src="${data.audio_url}"></audio>`;
+      logChat('Sistema', 'Respuesta de IA generada y reproducida.');
+    }else{
+      logChat('Sistema','Error generando audio de IA');
+    }
+  }catch(err){
+    logChat('Error',err.message);
+  }
+}
+playBtn.addEventListener('click', sendAIMessage);
