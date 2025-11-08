@@ -1,196 +1,128 @@
-// ======================= server.js =======================
+// server.js
 import express from 'express';
-import bodyParser from 'body-parser';
-import cors from 'cors';
-import Stripe from 'stripe';
-import jwt from 'jsonwebtoken';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import bodyParser from 'body-parser';
+import jwt from 'jsonwebtoken';
+import Stripe from 'stripe';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
+const __dirname = path.resolve();
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// --- CLAVES EN RENDER (nunca .env) ---
-const STRIPE_SECRET_KEY = 'tu_stripe_secret_key_aqui';
-const JWT_SECRET = 'clave_jwt_para_tokens_temporales';
+// Claves en Render
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY_RENDER;
+const STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY_RENDER;
+const JWT_SECRET = process.env.JWT_SECRET_RENDER || 'mi_secreto_temporal';
 
-const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-08-16' });
+const stripe = new Stripe(STRIPE_SECRET_KEY);
 
-app.use(cors());
-app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(bodyParser.json());
 
-// ===== Generar token temporal para sesiones premium =====
-function generateToken(data, expiresIn = '20m') {
-  if (!JWT_SECRET) throw new Error('secretOrPrivateKey must have a value');
-  return jwt.sign(data, JWT_SECRET, { expiresIn });
+// Tokens para sesiones temporales y control de uso
+const sessions = {};
+const FREE_DURATION = 8; // 8 segundos gratis
+const MAX_DURATION = 20 * 60; // 20 minutos max
+
+// Limitar sesiones activas
+let activeSessions = 0;
+const MAX_ACTIVE_SESSIONS = 10;
+
+function generateToken(sessionId, durationSec) {
+  return jwt.sign({ sessionId, exp: Math.floor(Date.now() / 1000) + durationSec }, JWT_SECRET);
 }
 
-// ===== Stripe Checkout =====
-app.post('/create-checkout-session', async (req, res) => {
-  const { amount, description, metadata } = req.body;
+// Endpoint para sesión gratuita inicial por tarjeta (8s)
+app.post('/start-free-session', (req, res) => {
+  const { cardId } = req.body;
+  if (!cardId) return res.status(400).json({ error: 'cardId obligatorio' });
+  if (sessions[cardId]?.usedFree) return res.status(403).json({ error: 'Ya usaste la prueba gratis con esta tarjeta' });
+
+  const sessionId = `free_${Date.now()}`;
+  const token = generateToken(sessionId, FREE_DURATION);
+  sessions[cardId] = { token, usedFree: true, start: Date.now() };
+  activeSessions++;
+  res.json({ token, duration: FREE_DURATION });
+});
+
+// Endpoint para crear sesión premium
+app.post('/create-session', async (req, res) => {
+  const { cardId, amount, description } = req.body;
+  if (activeSessions >= MAX_ACTIVE_SESSIONS) return res.status(429).json({ error: 'Sistema saturado. Intenta luego.' });
+
   try {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: [{ price_data: { currency: 'usd', product_data: { name: description }, unit_amount: amount }, quantity: 1 }],
+      line_items: [{
+        price_data: { currency: 'usd', product_data: { name: description }, unit_amount: amount },
+        quantity: 1,
+      }],
       mode: 'payment',
-      success_url: `${req.headers.origin}/?session=success`,
-      cancel_url: `${req.headers.origin}/?session=cancel`,
-      metadata
+      success_url: `${req.headers.origin}/?success=true`,
+      cancel_url: `${req.headers.origin}/?canceled=true`
     });
     res.json({ url: session.url });
-  } catch(err) {
-    res.status(500).json({ error: err.message });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'No se pudo crear sesión de pago' });
   }
 });
 
-// ===== AI Response (Gemini/OpenAI placeholder) =====
-app.post('/ai-response', async (req, res) => {
-  const { prompt, voice } = req.body;
-  // Aquí integrarías Gemini/OpenAI real
-  // Respuesta simulada:
-  res.json({ audio_url: `/audio/mood_success.mp3`, message: `IA responde: ${prompt}` });
-});
+// Endpoint IA emocional + música + vibraciones
+app.post('/ai-session', (req, res) => {
+  const { prompt, lang = 'es' } = req.body;
+  if (!prompt) return res.status(400).json({ error: 'Prompt obligatorio' });
 
-// ===== HTML catch-all =====
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/index.html'));
+  // Simulación IA (Gemini + fallback OpenAI)
+  let emotion = 'neutral';
+  if (/asustado|miedo|ansiedad/.test(prompt)) emotion = 'miedo';
+  if (/dinero|abundancia|éxito/.test(prompt)) emotion = 'dinero';
+  if (/amor|pareja|deseo/.test(prompt)) emotion = 'amor';
+  if (/duelo|tristeza|pérdida/.test(prompt)) emotion = 'duelo';
+  if (/energía|aburrimiento/.test(prompt)) emotion = 'energia';
+  if (/seguridad|confianza/.test(prompt)) emotion = 'seguridad';
+  if (/dormir|sueño/.test(prompt)) emotion = 'sueño';
+
+  // Música + sonido natural + binaurales simulados
+  const audioMap = {
+    neutral: '/audio/mood_neutral.mp3',
+    miedo: '/audio/mood_sad.mp3',
+    dinero: '/audio/mood_success.mp3',
+    amor: '/audio/mood_love.mp3',
+    duelo: '/audio/mood_duelo.mp3',
+    energia: '/audio/mood_energia.mp3',
+    seguridad: '/audio/mood_seguridad.mp3',
+    sueño: '/audio/mood_sueño.mp3'
+  };
+
+  const messages = {
+    es: {
+      miedo: 'Siento tu miedo. Vamos a acompañarlo con olas suaves y pad cálido.',
+      dinero: 'Entiendo tu necesidad de prosperar. Vamos a abrir espacio y claridad con melodía motivadora.',
+      amor: 'Percibo tu deseo de conexión. Activamos sonidos cálidos y vibraciones suaves.',
+      duelo: 'Sé que atraviesas una pérdida. Prepararemos sonidos consoladores y guía emocional.',
+      energia: 'Activamos música alegre y naturaleza viva para reactivar tu energía.',
+      seguridad: 'Crearemos sensación de estabilidad con acordes graves y latidos regulares.',
+      sueño: 'Te ayudamos a relajarte con pads largos y sonidos suaves para dormir.',
+      neutral: 'Vamos a equilibrar tus emociones con sonidos armoniosos y guía calmante.'
+    },
+    en: {
+      miedo: 'I sense your fear. We will accompany it with soft waves and warm pad.',
+      dinero: 'I understand your need to prosper. Let’s open space and clarity with motivational melody.',
+      amor: 'I sense your desire for connection. Activating warm sounds and gentle vibrations.',
+      duelo: 'I know you are experiencing loss. We will prepare consoling sounds and emotional guidance.',
+      energia: 'Activating joyful music and lively nature sounds to reactivate your energy.',
+      seguridad: 'We create stability sensation with deep chords and steady heartbeat.',
+      sueño: 'We help you relax with long pads and soft sounds for sleep.',
+      neutral: 'We will balance your emotions with harmonious sounds and calming guidance.'
+    }
+  };
+
+  res.json({ 
+    audio_url: audioMap[emotion] || audioMap['neutral'], 
+    message: messages[lang]?.[emotion] || messages['es']['neutral'], 
+    emotion 
+  });
 });
 
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
-
-
-// ======================= public/app.js =======================
-const freeBtn = document.getElementById('freeBtn');
-const fullBtn = document.getElementById('fullBtn');
-const vipBtn = document.getElementById('vipBtn');
-const moodEl = document.getElementById('mood');
-const intensityEl = document.getElementById('intensity');
-const sessionTypeEl = document.getElementById('sessionType');
-const userTextEl = document.getElementById('userText');
-const playBtn = document.getElementById('playBtn');
-const audioContainer = document.getElementById('audioContainer');
-const chatEl = document.getElementById('chat');
-
-// === Modo desarrollador solo para ti ===
-const isDevUser = window.location.href.includes('dev=true');
-let testAccessActive = false;
-
-if (isDevUser) {
-  testAccessActive = true;
-  logChat('Sistema', 'Modo desarrollador activo: acceso completo por 5 minutos.');
-  setTimeout(() => {
-    testAccessActive = false;
-    logChat('Sistema', 'Modo desarrollador expirado.');
-  }, 5 * 60 * 1000);
-}
-
-// === Audio map ===
-const audioMap = {
-  mood: { love:'/audio/mood_love.mp3', calm:'/audio/mood_calm.mp3', success:'/audio/mood_success.mp3', sad:'/audio/mood_sad.mp3', neutral:'/audio/mood_neutral.mp3' },
-  vip: { love:'/audio/vip_love.mp3', calm:'/audio/vip_calm.mp3', success:'/audio/vip_success.mp3', sad:'/audio/vip_sad.mp3', neutral:'/audio/vip_neutral.mp3' }
-};
-
-function logChat(sender, text){
-  const p = document.createElement('div');
-  p.innerHTML = `<strong>${sender}:</strong> ${text}`;
-  chatEl.appendChild(p);
-  chatEl.scrollTop = chatEl.scrollHeight;
-}
-
-function playMoodAudio(mood, type='mood'){
-  const src = audioMap[type][mood];
-  if (!src) return;
-  const audio = new Audio(src);
-  audio.volume = intensityEl.value / 100;
-  audio.play();
-  return audio;
-}
-
-// === Sesión gratuita 8s para usuarios normales, 5min para dev ===
-freeBtn.onclick = () => {
-  const mood = moodEl.value;
-  const type = sessionTypeEl.value;
-  logChat('Sistema', `Iniciando sesión gratuita para estado ${mood} y sesión ${type}`);
-  
-  const audio = playMoodAudio(mood, testAccessActive ? 'vip' : 'mood');
-  
-  setTimeout(() => {
-    if(audio) audio.pause();
-    logChat('Sistema', testAccessActive ? 'Sesión de desarrollo finalizada (5min).' : 'Sesión gratuita finalizada (8s).');
-  }, testAccessActive ? 5*60*1000 : 8000);
-};
-
-// === Sesión completa Stripe ===
-fullBtn.onclick = async () => {
-  const mood = moodEl.value;
-  const type = sessionTypeEl.value;
-  let amount = 0;
-  switch(type){
-    case 'private': amount=2000; break;
-    case 'personalized': amount=5000; break;
-    case 'group': amount=10000; break;
-    case 'corporate': amount=50000; break;
-    case 'hospital': amount=40000; break;
-    default: amount=2000;
-  }
-  try{
-    const res = await fetch('/create-checkout-session',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ amount, description:`Sesión completa ${mood}`, metadata:{actionType:'full_session', mood, voice:'Miguel', sessionType:type} })
-    });
-    const data = await res.json();
-    if(data.url) window.location.href = data.url;
-    else logChat('Error','No se pudo iniciar pago');
-  }catch(err){
-    logChat('Error',err.message);
-  }
-};
-
-// === Sesión VIP Stripe ===
-vipBtn.onclick = async () => {
-  const type = sessionTypeEl.value;
-  try{
-    const res = await fetch('/create-vip-checkout',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({step:'initial', sessionType:type})
-    });
-    const data = await res.json();
-    if(data.url) window.location.href = data.url;
-    else logChat('Error','No se pudo iniciar VIP');
-  }catch(err){
-    logChat('Error',err.message);
-  }
-};
-
-// === Chat IA ===
-async function sendAIMessage(){
-  const text = userTextEl.value.trim();
-  if(!text) return alert('Escribe algo primero');
-  logChat('Usuario', text);
-  const mood = moodEl.value;
-  const type = testAccessActive ? 'vip' : 'mood';
-  playMoodAudio(mood,type);
-  try{
-    const res = await fetch('/ai-response',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({prompt:text, voice:'Miguel'})
-    });
-    const data = await res.json();
-    if(data.audio_url){
-      audioContainer.innerHTML = `<audio controls autoplay src="${data.audio_url}"></audio>`;
-      logChat('Sistema', 'Respuesta de IA generada y reproducida.');
-    }else{
-      logChat('Sistema','Error generando audio de IA');
-    }
-  }catch(err){
-    logChat('Error',err.message);
-  }
-}
-playBtn.addEventListener('click', sendAIMessage);
