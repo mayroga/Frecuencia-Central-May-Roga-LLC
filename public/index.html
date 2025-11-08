@@ -6,49 +6,55 @@
 <title>Frecuencia Central - May Roga LLC</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<style>
+  body { font-family: 'Montserrat', sans-serif; background: #f0f4f8; color: #222; margin:0; padding:0;}
+  .container { max-width:800px; margin:20px auto; padding:20px; background:#fff; border-radius:15px; box-shadow:0 4px 20px rgba(0,0,0,0.1);}
+  h1,h2 { text-align:center; color:#444;}
+  select, textarea, button { width:100%; padding:10px; margin:5px 0; border-radius:10px; border:1px solid #ccc; font-size:16px;}
+  .actions { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:15px 0;}
+  .btn-free, .btn-session { flex:1 1 30%; cursor:pointer; font-weight:700; border:none; background:#4caf50; color:#fff; transition:0.3s;}
+  .btn-free:hover, .btn-session:hover { background:#45a049;}
+  #chat { height:250px; overflow-y:auto; border:1px solid #ccc; padding:10px; border-radius:10px; background:#f9f9f9;}
+  #audioContainer audio { width:100%; margin-top:10px; }
+  #followUp { margin-top:10px; background:#2196f3; color:#fff; cursor:pointer; border:none; border-radius:10px; padding:10px; font-weight:700;}
+  #followUp:hover { background:#1976d2; }
+</style>
 </head>
 <body>
 <div class="container">
   <h1>Frecuencia Central</h1>
-  <p>Bienvenido a nuestra plataforma de risoterapia y bienestar natural. Selecciona tu estado de ánimo o escribe cómo te sientes para comenzar.</p>
+  <p>Transforma lo que sientes en respuesta musical, sonora y vibratoria, guiada por nuestra IA empática.</p>
 
-  <h2>Selecciona tu estado de ánimo:</h2>
-  <select id="mood">
-    <option value="love">Amor ❤️</option>
-    <option value="calm">Calma 🌿</option>
-    <option value="success">Éxito 🏆</option>
-    <option value="sad">Tristeza 😔</option>
-    <option value="neutral">Neutral 😌</option>
-  </select>
-
-  <label for="intensity">Ajusta la intensidad / volumen:</label>
-  <input type="range" id="intensity" min="0" max="100" value="50">
-
-  <h2>Tipo de sesión</h2>
-  <select id="sessionType">
-    <option value="basic">Básica</option>
-    <option value="premium">Premium</option>
-    <option value="corporate">Corporativa</option>
-    <option value="hospital">Hospital</option>
-    <option value="vip">VIP</option>
-  </select>
-
+  <h2>Botones rápidos</h2>
   <div class="actions">
-    <button id="freeBtn">🎵 Sesión Gratis 8s</button>
-    <button id="fullBtn">💳 Sesión Completa</button>
-    <button id="vipBtn">🌟 Sesión VIP</button>
+    <button class="btn-free" data-need="miedo">Me siento asustado</button>
+    <button class="btn-free" data-need="dinero">Poco o nada de dinero</button>
+    <button class="btn-free" data-need="energia">Aburrido / Energía baja</button>
+    <button class="btn-free" data-need="amor">Quiero amor / Intimidad</button>
+    <button class="btn-free" data-need="duelo">Perdí a alguien</button>
+    <button class="btn-free" data-need="seguridad">Necesito seguridad/confianza</button>
   </div>
 
-  <h2>Escribe y escucha (Chat IA)</h2>
-  <textarea id="userText" rows="4" placeholder="Escribe aquí cómo te sientes..."></textarea>
+  <h2>Campo libre</h2>
+  <textarea id="userText" rows="4" placeholder="Escribe cómo te sientes o lo que deseas…"></textarea>
   <button id="playBtn">▶️ Escuchar / Enviar</button>
 
-  <div id="audioContainer" class="audio-container"></div>
-  <div id="chat" class="chat"></div>
+  <div id="audioContainer"></div>
+  <div id="chat"></div>
+
+  <h2>Opciones de pago / sesiones completas</h2>
+  <div class="actions">
+    <button class="btn-session" data-need="basico">🎵 Básico ($20)</button>
+    <button class="btn-session" data-need="premium">🌈 Premium Individual ($50–$250)</button>
+    <button class="btn-session" data-need="corporate">🏢 Corporativo ($500–$1500)</button>
+    <button class="btn-session" data-need="hospital">🏥 Hospitalario ($400–$1000)</button>
+    <button class="btn-session" data-need="vip">👑 VIP / Ultra ($5000)</button>
+  </div>
+
+  <button id="followUp">🔄 Revisar estado emocional</button>
 </div>
 
-<script src="tones.js"></script>
 <script src="app.js"></script>
-<script src="chatIA.js"></script>
+<script src="chatIA.js" type="module"></script>
 </body>
 </html>
